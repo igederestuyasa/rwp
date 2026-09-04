@@ -1,0 +1,59 @@
+# ===== Secrets & kredensial (JANGAN PERNAH commit) =====
+.env
+.env.*
+!.env.example
+!web/.env.local.example
+secrets.toml
+.streamlit/secrets.toml
+*.key
+*.pem
+
+# ===== Data sensitif RWP (jangan commit) =====
+data/rwp_docs/*
+!data/rwp_docs/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+evidence/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ===== Virtual environment =====
+venv/
+.venv/
+env/
+ENV/
+
+# ===== Embedding / model cache lokal =====
+.cache/
+models/
+*.bin
+*.gguf
+
+# ===== IDE & OS =====
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
+
+# ===== Node (root-level, untuk generate-deck.js) =====
+node_modules/
+/package-lock.json

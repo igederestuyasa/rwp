@@ -1,0 +1,123 @@
+@import "tailwindcss";
+/* Konfigurasi Tailwind: darkMode: "selector" — dark: aktif via class .dark, bukan media query */
+@config "../../tailwind.config.js";
+
+/* ─── Design tokens ─── */
+@theme {
+  /* Font stack: Inter (body), Space Grotesk (heading/display) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+
+  /* Accent */
+  --color-accent:           #5B5BD6;
+  --color-accent-hover:     #4A4AC4;
+  --color-accent-active:    #3D3DB0;
+  --color-accent-soft:      #EEEEFB;
+
+  /* Surfaces */
+  --color-canvas:           #FAFAFB;
+  --color-surface:          #FFFFFF;
+  --color-surface-raised:   #F7F7F8;
+
+  /* Borders */
+  --color-line:             #ECECEF;
+  --color-line-strong:      #DADAE0;
+
+  /* Text */
+  --color-ink:              #0B0B0F;
+  --color-ink-secondary:    #55555F;
+  --color-ink-muted:        #8A8A97;
+
+  /* Shadows (override Tailwind defaults) */
+  --shadow-xs:    0 1px 2px rgba(11,11,15,0.04);
+  --shadow-sm:    0 1px 3px rgba(11,11,15,0.06), 0 1px 2px rgba(11,11,15,0.04);
+  --shadow-md:    0 4px 12px rgba(11,11,15,0.08);
+  --shadow-lg:    0 12px 32px rgba(11,11,15,0.10);
+  --shadow-accent: 0 8px 24px rgba(91,91,214,0.25);
+}
+
+/* ─── Dark mode token overrides ─── */
+.dark {
+  --color-accent:           #7A7AE6;
+  --color-accent-hover:     #8A8AEE;
+  --color-accent-soft:      #1E1E33;
+
+  --color-canvas:           #0C0C10;
+  --color-surface:          #16161C;
+  --color-surface-raised:   #1E1E26;
+
+  --color-line:             #26262E;
+  --color-line-strong:      #34343E;
+
+  --color-ink:              #F4F4F6;
+  --color-ink-secondary:    #B4B4BE;
+  --color-ink-muted:        #76767F;
+
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.30);
+  --shadow-md:    0 4px 12px rgba(0,0,0,0.40);
+  --shadow-lg:    0 12px 32px rgba(0,0,0,0.50);
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Heading font: Space Grotesk ─── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* ─── Scrollbar halus ─── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-muted);
+}
+
+/* ─── Animasi fade-in halus untuk konten halaman ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeInUp 0.28s ease-out both;
+}
+
+/* ─── Pop card — dipakai saat kartu layanan "muncul" dari folder ─── */
+@keyframes cardPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-card-pop {
+  animation: cardPop 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ─── Hero banner — ring drift & dot flow ─── */
+@keyframes hero-ring-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(-22px, 16px) scale(1.08); }
+}
+@keyframes hero-ring-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(18px, -14px) scale(0.92); }
+}
+@keyframes hero-dots {
+  from { mask-position: 0 0; -webkit-mask-position: 0 0; }
+  to   { mask-position: 44px 44px; -webkit-mask-position: 44px 44px; }
+}
