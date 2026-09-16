@@ -2,9 +2,10 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Layers, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, CircleNotch, WarningCircle } from "@phosphor-icons/react";
 import { getSupabase, USE_MOCK } from "@/lib/supabaseClient";
 import { APP_NAME } from "@/lib/constants";
+import { Logo } from "@/components/hc/Logo";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { cn } from "@/lib/utils";
@@ -12,30 +13,36 @@ import { cn } from "@/lib/utils";
 // Halaman ini adalah landing dari link reset password di email.
 // Supabase otomatis mendeteksi token di URL hash dan set sesi "recovery".
 // Flow: /login → "Lupa kata sandi?" → email → klik link → halaman ini → update password.
+//
+// Tampilan mengikuti sistem UI "HC Panel" (docs/DESIGN.md): satu kolom terpusat,
+// warna hanya dari token, permukaan datar tanpa bayangan.
 
 type PageState = "loading" | "form" | "success" | "invalid";
+
+// Warna indikator kekuatan: satu-satunya tempat sukses/peringatan dipakai di
+// halaman ini, dan itu sah karena menandai status data (§Batas gaya).
+const NADA_KEKUATAN = ["bg-redup", "bg-peringatan", "bg-sukses"];
+const LABEL_KEKUATAN = ["Terlalu pendek", "Cukup", "Kuat", "Sangat kuat"];
 
 /** Indikator kekuatan password: lemah / sedang / kuat */
 function StrengthBar({ password }: { password: string }) {
   if (!password) return null;
   const len = password.length;
   const strength = len < 8 ? 0 : len < 10 ? 1 : len < 12 ? 2 : 3;
-  const labels = ["Terlalu pendek", "Cukup", "Kuat", "Sangat kuat"];
-  const colors = ["bg-rose-400", "bg-amber-400", "bg-blue-400", "bg-emerald-400"];
   return (
-    <div className="space-y-1">
-      <div className="flex gap-1">
+    <div className="space-y-2">
+      <div className="flex gap-1.5">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
             className={cn(
-              "h-1 flex-1 rounded-full transition-colors duration-300",
-              i < strength ? colors[strength - 1] : "bg-slate-200 dark:bg-slate-700",
+              "h-1 flex-1 rounded-full transition-colors duration-150",
+              i < strength ? NADA_KEKUATAN[strength - 1] : "bg-garis",
             )}
           />
         ))}
       </div>
-      <p className="text-xs text-slate-400 dark:text-slate-500">{labels[strength]}</p>
+      <p className="text-mikro font-semibold text-redup">{LABEL_KEKUATAN[strength]}</p>
     </div>
   );
 }
@@ -111,136 +118,135 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4 dark:bg-slate-950">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-latar px-5 py-12 lg:px-10">
+      <div className="mx-auto flex w-full max-w-[420px] flex-col">
 
-        {/* Logo */}
-        <div className="mb-7 flex items-center justify-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
-            <Layers className="h-4.5 w-4.5" />
+        {/* ── Pembuka: merek ── */}
+        <div
+          className="pembuka-masuk flex items-center gap-2.5"
+          style={{ animationDelay: "0ms" }}
+        >
+          <Logo size={28} />
+          <span className="text-isi font-bold tracking-[-0.01em] text-tinta">{APP_NAME}</span>
+        </div>
+
+        {/* ── Memverifikasi tautan ── */}
+        {pageState === "loading" && (
+          <div className="animate-in mt-8 flex items-center gap-3">
+            <CircleNotch size={20} aria-hidden="true" className="shrink-0 animate-spin text-redup" />
+            <p className="text-isi text-redup">Memverifikasi tautan pengaturan ulang…</p>
           </div>
-          <span className="text-base font-bold text-slate-900 dark:text-slate-100">
-            {APP_NAME}
-          </span>
-        </div>
+        )}
 
-        {/* Card */}
-        <div className="rounded-3xl bg-white px-8 py-9 shadow-xl shadow-slate-200/50 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:shadow-slate-900/40 dark:ring-slate-700/60">
+        {/* ── Token tidak valid / kedaluwarsa ── */}
+        {pageState === "invalid" && (
+          <div className="animate-in">
+            <span className="mt-8 flex h-11 w-11 items-center justify-center rounded-[var(--radius-input)] border border-garis bg-kartu text-merah">
+              <WarningCircle size={22} aria-hidden="true" />
+            </span>
 
-          {/* ── Loading ── */}
-          {pageState === "loading" && (
-            <div className="py-4 text-center">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                Memverifikasi link reset…
-              </p>
-            </div>
-          )}
+            <h1 className="mt-6 text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta">
+              Tautan tidak valid
+            </h1>
+            <p className="mt-4 max-w-[44ch] text-subjudul leading-[1.5] text-redup">
+              Tautan sudah kedaluwarsa atau pernah dipakai. Minta tautan baru dari halaman masuk.
+            </p>
 
-          {/* ── Token tidak valid / expired ── */}
-          {pageState === "invalid" && (
-            <div className="text-center">
-              <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-2xl bg-rose-50 dark:bg-rose-900/30">
-                <AlertCircle className="h-7 w-7 text-rose-500 dark:text-rose-400" />
-              </div>
-              <h2 className="mt-5 text-xl font-bold text-slate-900 dark:text-slate-100">
-                Link tidak valid
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                Link sudah kedaluwarsa atau sudah pernah digunakan. Silakan minta
-                link reset baru dari halaman masuk.
-              </p>
-              <div className="mt-5 border-t border-slate-100 pt-5 dark:border-slate-700/50">
-                <button
-                  onClick={() => router.push("/login")}
-                  className="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  ← Kembali ke halaman masuk
-                </button>
-              </div>
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="mt-6 inline-flex min-h-11 items-center gap-2 text-bantu font-semibold text-tinta transition-colors duration-150 hover:text-merah"
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              Kembali ke halaman masuk
+            </button>
+          </div>
+        )}
 
-          {/* ── Form ganti sandi ── */}
-          {pageState === "form" && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-900/30">
-                <KeyRound className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
+        {/* ── Form ganti sandi ── */}
+        {pageState === "form" && (
+          <div className="animate-in">
+            <h1
+              className="pembuka-masuk mt-8 text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta"
+              style={{ animationDelay: "60ms" }}
+            >
+              Buat kata sandi baru
+            </h1>
+            <p
+              className="pembuka-masuk mt-4 max-w-[44ch] text-subjudul leading-[1.5] text-redup"
+              style={{ animationDelay: "110ms" }}
+            >
+              Masukkan kata sandi baru yang kuat untuk akun kamu.
+            </p>
 
-              <h2 className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100">
-                Buat kata sandi baru
-              </h2>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Masukkan kata sandi baru yang kuat untuk akun kamu.
-              </p>
+            <form
+              onSubmit={onSubmit}
+              className="pembuka-masuk mt-8 flex flex-col gap-4"
+              style={{ animationDelay: "170ms" }}
+            >
+              <Field label="Kata sandi baru">
+                <Input
+                  type="password"
+                  placeholder="Min. 8 karakter"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  autoFocus
+                />
+              </Field>
 
-              <form onSubmit={onSubmit} className="mt-7 space-y-4">
-                <Field label="Kata sandi baru">
-                  <Input
-                    type="password"
-                    placeholder="Min. 8 karakter"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    autoFocus
-                  />
-                </Field>
+              {/* Indikator kekuatan */}
+              <StrengthBar password={password} />
 
-                {/* Indikator kekuatan */}
-                <StrengthBar password={password} />
+              <Field label="Konfirmasi kata sandi">
+                <Input
+                  type="password"
+                  placeholder="Ketik ulang kata sandi baru"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </Field>
 
-                <Field label="Konfirmasi kata sandi">
-                  <Input
-                    type="password"
-                    placeholder="Ketik ulang kata sandi baru"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    autoComplete="new-password"
-                  />
-                </Field>
+              {/* Pesan error */}
+              {error && (
+                <p role="alert" className="flex items-start gap-1.5 text-bantu text-merah">
+                  <WarningCircle size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </p>
+              )}
 
-                {/* Pesan error */}
-                {error && (
-                  <div className="flex items-start gap-2.5 rounded-xl bg-rose-50 px-3.5 py-3 text-sm text-rose-700 ring-1 ring-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:ring-rose-800">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                    {error}
-                  </div>
-                )}
-
-                <Button type="submit" size="lg" className="w-full" disabled={loading}>
-                  {loading ? "Menyimpan…" : "Simpan Kata Sandi Baru"}
-                </Button>
-              </form>
-            </div>
-          )}
-
-          {/* ── Sukses ── */}
-          {pageState === "success" && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 text-center">
-              <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-900/30">
-                <CheckCircle2 className="h-7 w-7 text-blue-600 dark:text-blue-400" />
-              </div>
-
-              <h2 className="mt-5 text-2xl font-bold text-slate-900 dark:text-slate-100">
-                Kata sandi diperbarui!
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                Kata sandi akun kamu berhasil diubah. Silakan masuk kembali dengan
-                kata sandi baru kamu.
-              </p>
-
-              <Button
-                size="lg"
-                className="mt-7 w-full"
-                onClick={() => router.push("/login")}
-              >
-                Masuk sekarang
+              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                {loading ? "Menyimpan…" : "Simpan kata sandi baru"}
               </Button>
-            </div>
-          )}
+            </form>
+          </div>
+        )}
 
-        </div>
+        {/* ── Sukses ── */}
+        {pageState === "success" && (
+          <div className="animate-in">
+            <span className="mt-8 flex h-11 w-11 items-center justify-center rounded-[var(--radius-input)] border border-garis bg-kartu text-sukses">
+              <CheckCircle size={22} aria-hidden="true" />
+            </span>
+
+            <h1 className="mt-6 text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta">
+              Kata sandi diperbarui
+            </h1>
+            <p className="mt-4 max-w-[44ch] text-subjudul leading-[1.5] text-redup">
+              Kata sandi akunmu berhasil diubah. Masuk kembali dengan kata sandi baru.
+            </p>
+
+            <Button
+              size="lg"
+              className="mt-8 w-full"
+              onClick={() => router.push("/login")}
+            >
+              Masuk sekarang
+            </Button>
+          </div>
+        )}
+
       </div>
     </div>
   );
