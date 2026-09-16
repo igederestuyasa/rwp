@@ -62,7 +62,11 @@ export function ItemCard({
       ? "border-dashed border-garis-putus bg-transparent"
       : "border-garis bg-kartu",
     // Terpilih: cukup border tinta (§Komponen — tanpa latar tambahan).
-    terpilih && "border-tinta",
+    // Hanya mulai lg: §Pola daftar-detail menetapkan tanda terpilih cuma
+    // tampil saat panel detail terlihat, dan panel disembunyikan di bawah
+    // 1024px. Tanpa pembatas ini, kartu pertama tampak "terpilih" di HP
+    // padahal tidak ada panel yang menjelaskan artinya.
+    terpilih && "lg:border-tinta",
     rencana && "cursor-default",
     className,
   );
