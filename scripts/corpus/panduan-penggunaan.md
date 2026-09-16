@@ -1,96 +1,147 @@
-# Panduan Penggunaan Aplikasi RWP Hutama Karya
+---
+doc_id: panduan-penggunaan
+---
+# Panduan Penggunaan Aplikasi RWP Hutama Karya untuk Karyawan
 
-Dokumen ini menjelaskan cara memakai aplikasi RWP Hutama Karya, dari sisi
-karyawan maupun admin. Dipakai asisten untuk menjawab pertanyaan "caranya gimana".
+Dokumen ini menjelaskan cara memakai aplikasi RWP Hutama Karya dari sisi karyawan.
+Panduan untuk admin ada di dokumen terpisah.
 
 ## Masuk ke aplikasi
 
-Buka alamat aplikasi, lalu masuk dengan email kantor dan kata sandi yang
-diberikan tim Human Capital. Lupa kata sandi? Klik "Lupa kata sandi" di halaman
-masuk; tautan pengaturan ulang dikirim ke email kantor.
+Buka alamat aplikasi, lalu masuk dengan email kantor dan kata sandi yang diberikan
+tim Human Capital. Setelah masuk, karyawan diarahkan ke **Beranda**.
 
-Setelah masuk, karyawan diarahkan ke Beranda, sedangkan admin diarahkan ke Dashboard.
+Lupa kata sandi? Tekan **"Lupa kata sandi?"** di halaman masuk dan masukkan email
+kantor. Tautan untuk mengatur ulang kata sandi dikirim ke email tersebut dan
+membuka halaman pengaturan kata sandi baru.
+
+Demi keamanan, sesi otomatis keluar setelah **5 menit tidak aktif**. Satu menit
+sebelumnya muncul peringatan dengan tombol "Tetap masuk".
+
+## Menu untuk karyawan
+
+Menu ada di sidebar kiri (di HP lewat ikon garis tiga di kiri atas):
+
+- **Beranda**: pintu ke empat layanan dan kotak pertanyaan cepat ke Sahabat RWP.
+- **Kebijakan RWP**: handbook lengkap.
+- **Lapor Insiden**: formulir pelaporan.
+- **Lacak Laporan**: daftar laporan Anda dan detailnya.
+- **Layanan Psikologi**: enam kanal dukungan.
+- **Sahabat RWP**: asisten AI.
+- **Pengaturan** dan **Bantuan**.
+
+## Membaca kebijakan RWP
+
+Menu **Kebijakan RWP** menampilkan handbook Respectful Workplace Policy. Isinya
+mencakup landasan, definisi enam kategori pelanggaran, jenis dan contoh pelanggaran,
+alur pencegahan, penanganan, dan pelaporan, serta contoh kasus. Bila dokumen
+tersedia dalam bentuk PDF, tampilannya diberi tanda air berisi nama dan NIK
+pembaca supaya salinan yang bocor dapat dilacak.
 
 ## Melaporkan insiden
 
-Menu **Lapor Insiden** ada di beranda (kartu merah) dan di sidebar kiri.
+Buka **Lapor Insiden** dari Beranda atau sidebar.
 
 Yang wajib diisi:
 
-- **Kategori insiden** — pilih salah satu dari Diskriminasi, Kekerasan, Pelecehan, Perundungan, Bias Gender, Eksklusivitas, atau Lainnya.
-- **Judul / ringkasan singkat** — maksimal 140 karakter.
-- **Kronologi kejadian** — ceritakan runut: apa, kapan, di mana, siapa yang terlibat, bagaimana kejadiannya.
-- **Tanggal kejadian** — tidak boleh tanggal di masa depan.
+- **Kategori insiden**: pilih salah satu dari Diskriminasi, Kekerasan, Pelecehan,
+  Perundungan, Bias Gender, Eksklusivitas, atau Lainnya.
+- **Judul**: ringkasan singkat, maksimal 140 karakter.
+- **Kronologi kejadian**: ceritakan secara runut apa yang terjadi, kapan, di mana,
+  siapa yang terlibat, dan bagaimana kejadiannya.
+- **Tanggal kejadian**: tidak boleh tanggal di masa depan.
 
-Yang opsional: lokasi, pihak terlapor (boleh inisial saja), dan bukti pendukung.
+Yang opsional: **lokasi**, **pihak terlapor** (boleh inisial saja), dan **bukti
+pendukung**.
 
-Bukti pendukung boleh berupa gambar, PDF, dokumen Word/Excel, atau rekaman audio,
-maksimal 10 MB per berkas dan boleh lebih dari satu. Nama asli berkas tidak dipakai
-sebagai nama penyimpanan, dan berkas hanya bisa diunduh lewat tautan sementara
-yang berlaku 10 menit.
+### Bukti pendukung
 
-Centang **"Laporkan secara anonim"** bila tidak ingin identitas terlihat admin.
+Berkas bukti boleh lebih dari satu, maksimal **10 MB per berkas**. Jenis yang
+diterima: gambar (JPG, PNG), PDF, dokumen Word dan Excel (DOC, DOCX, XLS, XLSX),
+serta rekaman audio (MP3, WAV, OGG, M4A, AAC). Isi berkas diperiksa, bukan hanya
+nama atau ekstensinya, jadi berkas yang diganti namanya akan ditolak. Berkas
+disimpan dengan nama acak, bukan nama aslinya, dan hanya dapat diunduh lewat tautan
+sementara yang berlaku 10 menit.
 
-Setelah dikirim, aplikasi menampilkan **nomor tiket** berformat RWP-TAHUN-NNNN.
-Simpan nomor itu.
+### Melapor secara anonim
+
+Centang **"Laporkan secara anonim"** bila tidak ingin identitas Anda terlihat oleh
+admin. Nama dan NIK tidak akan disertakan pada laporan. Anda tetap dapat melacak
+laporan dan berkomunikasi dengan admin dari akun Anda.
+
+### Setelah dikirim
+
+Aplikasi menampilkan **nomor tiket** berformat RWP-TAHUN-NNNN, misalnya
+RWP-2026-0007. Nomor ini menjadi kunci Anda untuk memantau penanganan. Status awal
+laporan adalah **Diterima**.
 
 ## Melacak laporan
 
-Menu **Lacak Laporan** menampilkan seluruh laporan milikmu beserta statusnya.
-Klik salah satu untuk membuka detail, yang berisi:
+Menu **Lacak Laporan** menampilkan seluruh laporan milik Anda beserta statusnya.
+Ada pencarian, penyaring status, dan penyaring tanggal. Arahkan kursor ke sebuah
+laporan untuk melihat ringkasannya di panel kanan, lalu buka untuk melihat detail:
 
-- ringkasan laporan (kategori, tanggal kejadian, lokasi, pihak terlapor, status anonim)
-- daftar bukti yang kamu lampirkan
-- **Riwayat Status** — jejak perubahan status beserta catatan admin
-- **kolom percakapan** — tempat kamu dan admin bertukar pesan, boleh dengan lampiran
+- ringkasan laporan: kategori, tanggal kejadian, lokasi, pihak terlapor, dan
+  apakah dilaporkan anonim;
+- daftar bukti yang Anda lampirkan;
+- **Riwayat Status**: jejak perubahan status beserta catatan admin dan lampirannya,
+  termasuk catatan bila identitas Anda pernah dibuka lewat eskalasi;
+- **percakapan**: tempat Anda dan admin bertukar pesan, boleh dengan lampiran.
 
-Status laporan bergerak: Diterima → Sedang Ditinjau → Tindak Lanjut → Selesai.
-Laporan juga bisa Ditutup bila tidak dilanjutkan, dan admin wajib menuliskan alasannya.
+## Arti tiap status laporan
 
-## Arti tiap status
+- **Diterima**: laporan masuk dan belum ditinjau admin.
+- **Sedang Ditinjau**: admin sedang menilai laporan.
+- **Tindak Lanjut**: laporan sedang ditangani.
+- **Selesai**: penanganan tuntas.
+- **Ditutup**: tidak dilanjutkan, misalnya di luar lingkup atau duplikat. Admin
+  wajib menuliskan alasannya, dan alasan itu terbaca oleh pelapor.
 
-- **Diterima** — laporan masuk, belum ditinjau admin.
-- **Sedang Ditinjau** — admin sedang menilai laporan.
-- **Tindak Lanjut** — laporan sedang ditangani.
-- **Selesai** — penanganan tuntas.
-- **Ditutup** — tidak dilanjutkan (misalnya di luar lingkup atau duplikat), selalu disertai alasan.
+Urutan normalnya Diterima, lalu Sedang Ditinjau, lalu Tindak Lanjut, lalu Selesai.
+Laporan dapat Ditutup dari status mana pun sebelum Selesai. Laporan yang sudah
+Selesai atau Ditutup dapat dibuka kembali oleh admin dengan alasan yang tercatat.
 
-## Bertanya ke asisten
+## Notifikasi
 
-Menu **Sahabat RWP** adalah asisten yang menjawab pertanyaan seputar kebijakan RWP
-berdasarkan handbook resmi perusahaan. Percakapan tersimpan sebagai riwayat, bisa
-dibuka lagi, dan bisa dihapus. Asisten hanya membaca dokumen kebijakan — ia tidak
-punya akses ke isi laporan siapa pun.
+Ikon lonceng di bagian atas menampilkan notifikasi saat status laporan Anda berubah
+atau ada balasan dari admin. Notifikasi dapat ditandai sudah dibaca atau dihapus.
+Preferensi notifikasi diatur di menu Pengaturan.
 
-Asisten tidak menjawab pertanyaan HC di luar RWP (cuti, gaji, tunjangan, pelatihan);
-untuk itu hubungi tim Human Capital langsung.
+## Bertanya ke Sahabat RWP
+
+Menu **Sahabat RWP** membuka asisten AI. Ketik pertanyaan dengan bahasa sehari-hari,
+misalnya "apa bedanya perundungan dengan kritik keras?" atau "bagaimana cara
+melapor anonim?". Jawaban disusun dari handbook RWP resmi dan dokumen panduan
+aplikasi, disertai nama dokumen sumbernya.
+
+Percakapan tersimpan sebagai riwayat di sisi kiri: Anda dapat membuat percakapan
+baru, membuka percakapan lama, atau menghapusnya. Sesekali asisten meminta
+penilaian bintang untuk membantu kami memperbaikinya.
+
+Asisten tidak punya akses ke isi laporan siapa pun dan hanya menjawab topik RWP,
+aplikasi ini, dan Layanan Psikologi.
 
 ## Layanan Psikologi
 
-Menu **Layanan Psikologi** berisi enam kanal kontak langsung ke tenaga profesional.
-Kanal ini terpisah dari sistem pelaporan: isi sesi konseling tidak masuk ke aplikasi
-dan menghubungi mereka tidak otomatis membuat laporan.
+Menu **Layanan Psikologi** berisi enam kanal kontak langsung ke tenaga profesional:
+careline 24 jam, WhatsApp, psikolog internal, email psikolog internal, platform
+Naluri, dan asesmen mandiri. Kanal ini terpisah dari sistem pelaporan: isi sesi
+konseling tidak masuk ke aplikasi dan menghubungi kanal ini tidak otomatis membuat
+laporan. Detailnya ada di dokumen Layanan Psikologi.
 
 ## Pengaturan akun
 
-Menu **Pengaturan** memuat pilihan tema (terang/gelap), preferensi notifikasi, dan
-penggantian kata sandi. Data profil (nama, NIK, email) **tidak bisa** diubah sendiri
-lewat aplikasi — perubahan itu melalui sistem kepegawaian.
+Menu **Pengaturan** memuat:
 
-## Untuk admin
+- **Tampilan**: tema terang atau gelap.
+- **Notifikasi**: pilihan notifikasi pesan dan perubahan status.
+- **Keamanan**: ganti kata sandi. Masukkan kata sandi saat ini, lalu kata sandi baru
+  minimal 8 karakter.
 
-Admin masuk ke **Dashboard** yang berisi ringkasan jumlah laporan, sebaran status,
-tren laporan masuk, sebaran kategori insiden, dan proporsi laporan anonim.
+Data profil (nama, NIK, email) **tidak dapat diubah sendiri** lewat aplikasi.
+Perubahan data kepegawaian dilakukan melalui tim Human Capital.
 
-Menu **Daftar Laporan** memuat seluruh laporan dengan penyaring status dan tanggal.
-Di halaman detail, admin bisa:
+## Bantuan
 
-- mengubah status lewat proses dua tahap (isi → tinjau → konfirmasi), dengan catatan dan lampiran
-- membuka kembali laporan yang sudah final, dengan alasan yang tercatat
-- membalas percakapan pelapor
-
-Admin **tidak bisa** membuat laporan.
-
-Admin dengan wewenang eskalasi (admin superior) bisa membuka identitas pelapor
-anonim. Pembukaan itu wajib disertai alasan, tercatat di log audit, dan **terlihat
-oleh pelapor** di Riwayat Status laporannya.
+Menu **Bantuan** merangkum pertanyaan yang paling sering diajukan dan tautan cepat
+ke Sahabat RWP serta Layanan Psikologi.
