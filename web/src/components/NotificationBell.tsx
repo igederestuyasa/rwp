@@ -1,10 +1,16 @@
-﻿"use client";
+"use client";
+
+// Lonceng notifikasi — tampilan mengikuti sistem UI "HC Panel" (docs/DESIGN.md).
+// Popover boleh berbayangan (shadow-popover); tombol lonceng tidak.
+// Sumber data & aksi (useNotifications: markRead, markAllRead, dismiss,
+// dismissAll, persist localStorage) tidak berubah.
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, FileText, MessageSquare, RefreshCw, X, Trash2 } from "lucide-react";
+import { Bell, FileText, ChatCircle, ArrowsClockwise, X, Trash } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
 import { useNotifications, type AppNotification } from "@/lib/useNotifications";
+import { cn } from "@/lib/utils";
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -19,10 +25,10 @@ function relativeTime(iso: string): string {
 
 function NotifIcon({ type }: { type: AppNotification["type"] }) {
   if (type === "new_message")
-    return <MessageSquare className="h-4 w-4 text-blue-500" />;
+    return <ChatCircle size={18} aria-hidden="true" className="text-redup" />;
   if (type === "new_ticket")
-    return <FileText className="h-4 w-4 text-amber-500" />;
-  return <RefreshCw className="h-4 w-4 text-green-500" />;
+    return <FileText size={18} aria-hidden="true" className="text-redup" />;
+  return <ArrowsClockwise size={18} aria-hidden="true" className="text-redup" />;
 }
 
 export function NotificationBell() {
@@ -48,98 +54,132 @@ export function NotificationBell() {
   const filtered = notifications;
 
   return (
-    <div ref={ref} className="relative flex flex-col">
+    <div ref={ref} className="relative flex flex-col justify-center">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Buka notifikasi"
-        className="relative flex flex-1 items-center justify-center rounded-xl px-2.5 text-slate-600 bg-white/75 shadow-sm backdrop-blur-sm transition-all hover:shadow-md dark:bg-slate-800 dark:text-slate-300 dark:ring-1 dark:ring-slate-700"
+        aria-expanded={open}
+        className={cn(
+          "relative flex h-11 w-11 items-center justify-center rounded-full",
+          "border border-garis bg-kartu text-redup",
+          "transition-colors duration-150 ease-[var(--ease-standar)]",
+          "hover:border-garis-kuat hover:text-tinta",
+        )}
       >
-        <Bell className="h-5 w-5" />
+        <Bell size={20} aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold leading-none text-white">
+          <span
+            className={cn(
+              "absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1",
+              "bg-merah text-mikro font-bold leading-none text-kartu tabular-nums",
+            )}
+          >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[440px] max-w-[calc(100vw-1.25rem)] rounded-xl border border-slate-200/60 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-700">
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Notifikasi</span>
+        <div
+          className={cn(
+            "absolute right-0 top-full z-50 mt-2 w-[440px] max-w-[calc(100vw-2.5rem)]",
+            "rounded-[var(--radius-kartu)] border border-garis bg-kartu",
+            "shadow-[var(--shadow-popover)]",
+          )}
+        >
+          {/* Kepala */}
+          <div className="flex items-center justify-between gap-3 border-b border-garis px-4 py-2">
+            <span className="text-bantu font-semibold text-tinta">Notifikasi</span>
             {notifications.length > 0 && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
                 {unreadCount > 0 && (
                   <button
+                    type="button"
                     onClick={markAllRead}
-                    className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+                    className={cn(
+                      "flex h-11 items-center rounded-full px-3 text-bantu font-medium text-redup",
+                      "transition-colors duration-150 ease-[var(--ease-standar)]",
+                      "hover:bg-latar hover:text-tinta",
+                    )}
                   >
                     Tandai dibaca
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={dismissAll}
-                  className="flex items-center gap-1 text-xs text-slate-400 transition-colors hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400"
+                  className={cn(
+                    "flex h-11 items-center gap-1.5 rounded-full px-3 text-bantu font-medium text-redup",
+                    "transition-colors duration-150 ease-[var(--ease-standar)]",
+                    "hover:bg-latar hover:text-merah",
+                  )}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash size={16} aria-hidden="true" />
                   Hapus semua
                 </button>
               </div>
             )}
           </div>
 
-          {/* List notifikasi */}
-          <ul className="max-h-96 divide-y divide-slate-50 overflow-y-auto dark:divide-slate-700">
+          {/* Daftar notifikasi */}
+          <ul className="max-h-96 divide-y divide-garis overflow-y-auto">
             {filtered.length === 0 ? (
-              <li className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-                Tidak ada notifikasi
+              <li className="px-4 py-8 text-center text-bantu text-redup">
+                Belum ada notifikasi. Pemberitahuan baru akan muncul di sini.
               </li>
             ) : (
               filtered.map((n) => (
-                <li
-                  key={n.id}
-                  className={`group relative ${isRead(n.id) ? "" : "bg-blue-50 dark:bg-blue-900/20"}`}
-                >
+                <li key={n.id} className={cn("group relative", !isRead(n.id) && "bg-latar")}>
                   <Link
                     href={n.href}
                     onClick={() => {
                       markRead(n.id);
                       setOpen(false);
                     }}
-                    className="flex gap-3 px-4 py-3 pr-9 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                    className={cn(
+                      "flex gap-3 px-4 py-3 pr-14",
+                      "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar",
+                    )}
                   >
-                    <div className="mt-0.5 shrink-0">
+                    <span className="mt-0.5 shrink-0">
                       <NotifIcon type={n.type} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          {n.title}
-                        </span>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="text-bantu font-semibold text-tinta">{n.title}</span>
                         {!isRead(n.id) && (
-                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                          <span
+                            aria-label="Belum dibaca"
+                            className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-merah"
+                          />
                         )}
-                      </div>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-bantu text-redup">
                         {n.body}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="text-xs text-slate-400 dark:text-slate-500">
-                          {relativeTime(n.createdAt)}
-                        </span>
-                      </div>
-                    </div>
+                      </span>
+                      <span className="mt-1 block text-mikro text-redup">
+                        {relativeTime(n.createdAt)}
+                      </span>
+                    </span>
                   </Link>
-                  {/* Tombol hapus notifikasi — muncul saat hover */}
+
+                  {/* Tombol hapus notifikasi — muncul saat hover atau saat difokus */}
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       dismiss(n.id);
                     }}
-                    aria-label="Hapus notifikasi"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md text-slate-300 opacity-0 transition-all group-hover:opacity-100 hover:bg-slate-100 hover:text-red-500 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-red-400"
+                    aria-label={`Hapus notifikasi ${n.title}`}
+                    className={cn(
+                      "absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center",
+                      "rounded-full text-redup opacity-0",
+                      "transition-[color,opacity] duration-150 ease-[var(--ease-standar)]",
+                      "hover:text-merah group-hover:opacity-100 focus-visible:opacity-100",
+                    )}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X size={16} aria-hidden="true" />
                   </button>
                 </li>
               ))
