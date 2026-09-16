@@ -1,0 +1,13 @@
+# Konfigurasi Supabase CLI.
+# project_id dipakai CLI sebagai nama project lokal; isi dengan ref project
+# kamu (Dashboard > Project Settings > General > Reference ID) sebelum
+# menjalankan `supabase link`.
+project_id = "rwp-hutama-karya"
+
+[db]
+# Samakan dengan versi Postgres project Supabase kamu.
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seeds/01_users_demo.sql", "./seeds/02_policies.sql"]

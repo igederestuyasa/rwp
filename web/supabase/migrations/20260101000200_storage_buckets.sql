@@ -1,7 +1,7 @@
 -- ============================================================
 -- RWP Hutama Karya — Storage buckets & policies
 -- ------------------------------------------------------------
--- Jalankan KEDUA, setelah 01_schema.sql.
+-- Migrasi kedua, setelah baseline_schema.
 -- Aman dijalankan ulang (idempotent).
 --
 -- Dua bucket, dua tujuan:
@@ -72,3 +72,23 @@ set file_size_limit = 20971520,          -- 20 MB, dokumen kebijakan bisa tebal
 where id = 'policy-docs';
 
 -- Selesai. Lanjut ke 03_seed_users.sql.
+
+
+-- ============================================================
+-- Catat versi migrasi ini.
+-- ------------------------------------------------------------
+-- Tabel ini milik Supabase CLI. Dengan menuliskannya sendiri, migrasi yang
+-- dijalankan manual lewat SQL Editor tetap terbaca oleh `supabase db push`
+-- nanti, sehingga tidak dijalankan dua kali.
+-- ============================================================
+create schema if not exists supabase_migrations;
+
+create table if not exists supabase_migrations.schema_migrations (
+    version    text primary key,
+    statements text[],
+    name       text
+);
+
+insert into supabase_migrations.schema_migrations (version, name)
+values ('20260101000200', 'storage_buckets')
+on conflict (version) do nothing;

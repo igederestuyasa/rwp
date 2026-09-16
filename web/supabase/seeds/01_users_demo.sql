@@ -1,7 +1,7 @@
 -- ============================================================
 -- RWP Hutama Karya — Profil pengguna demo
 -- ------------------------------------------------------------
--- Jalankan KETIGA, setelah 02_storage.sql.
+-- Seed pertama. Jalankan SETELAH semua migrasi selesai.
 --
 -- PRASYARAT: akun Auth-nya harus sudah dibuat lebih dulu di
 -- Supabase Dashboard > Authentication > Users (centang "Auto Confirm User"),

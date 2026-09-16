@@ -3,6 +3,20 @@ import type { NextConfig } from "next";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseHost = supabaseUrl ? new URL(supabaseUrl).hostname : "";
 
+// Hentikan build kalau mode Supabase dipilih tapi URL-nya tidak ada.
+// Tanpa penjagaan ini, build tetap lolos dan hasil deploy-nya rusak secara
+// senyap: connect-src di CSP bawah tidak memuat host Supabase, sehingga
+// SETIAP permintaan ke database diblokir browser tanpa pesan yang jelas.
+// NEXT_PUBLIC_* dibaca saat build, jadi variabelnya harus sudah ada di
+// environment build (di Vercel: Project Settings > Environment Variables).
+if (process.env.NEXT_PUBLIC_USE_MOCK !== "true" && !supabaseUrl) {
+  throw new Error(
+    "NEXT_PUBLIC_SUPABASE_URL kosong padahal NEXT_PUBLIC_USE_MOCK bukan \"true\". " +
+      "Isi variabelnya di environment build, atau set NEXT_PUBLIC_USE_MOCK=true " +
+      "kalau memang ingin build mode mock.",
+  );
+}
+
 // Development butuh 'unsafe-eval' untuk HMR (hot module replacement).
 // Production tidak perlu.
 const isDev = process.env.NODE_ENV === "development";
@@ -28,8 +42,13 @@ const cspHeader = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-  // DEV ONLY: izinkan akses dari HP di jaringan lokal. Hapus setelah testing.
-  allowedDevOrigins: ["192.168.0.174"],
+  // Akses dev dari perangkat lain di jaringan lokal (mis. menguji di HP).
+  // Isi lewat env, jangan ditulis langsung: alamat IP milik satu mesin tidak
+  // ada gunanya bagi orang lain dan ikut terbawa ke repo.
+  //   NEXT_PUBLIC_DEV_ORIGIN=192.168.0.174 npm run dev
+  allowedDevOrigins: process.env.NEXT_PUBLIC_DEV_ORIGIN
+    ? [process.env.NEXT_PUBLIC_DEV_ORIGIN]
+    : [],
   async headers() {
     return [
       {

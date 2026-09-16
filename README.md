@@ -79,15 +79,21 @@ Cukup untuk melihat seluruh alur tanpa menyiapkan apa pun.
 
 ### 4. Menyalakan Supabase
 
-Buat project Supabase baru, lalu jalankan empat berkas SQL di **SQL Editor**
-secara **berurutan**:
+Buat project Supabase baru, lalu jalankan SQL di `web/supabase/` secara
+**berurutan** — lewat `supabase db push` atau tempel manual di **SQL Editor**.
+Petunjuk lengkap beserta cara menambah perubahan skema berikutnya ada di
+[`web/supabase/README.md`](web/supabase/README.md).
 
 | Urutan | Berkas | Isi |
 |---|---|---|
-| 1 | `web/scripts/01_schema.sql` | Semua tabel, trigger, RLS, view admin, dan RPC |
-| 2 | `web/scripts/02_storage.sql` | Bucket `rwp-evidence` & `policy-docs` + batas ukuran/MIME |
-| 3 | `web/scripts/03_seed_users.sql` | Profil 3 akun demo |
-| 4 | `web/scripts/04_seed_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
+| 1 | `web/supabase/migrations/20260101000100_baseline_schema.sql` | Semua tabel, trigger, RLS, view admin, dan RPC |
+| 2 | `web/supabase/migrations/20260101000200_storage_buckets.sql` | Bucket `rwp-evidence` & `policy-docs` + batas ukuran/MIME |
+| 3 | `web/supabase/seeds/01_users_demo.sql` | Profil 3 akun demo |
+| 4 | `web/supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
+
+Dua yang pertama adalah **migrasi** (mengubah bentuk database, dijalankan di
+semua lingkungan). Dua terakhir adalah **seed** (isi demo — jangan dijalankan di
+lingkungan yang menampung laporan asli).
 
 **Sebelum menjalankan nomor 3**, buat dulu akun Auth-nya di
 *Dashboard → Authentication → Users* (centang **Auto Confirm User**):

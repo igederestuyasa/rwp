@@ -1,7 +1,7 @@
 -- ============================================================
 -- RWP Hutama Karya — Isi halaman /kebijakan
 -- ------------------------------------------------------------
--- Jalankan KEEMPAT, setelah 03_seed_users.sql.
+-- Seed kedua, setelah 01_users_demo.sql.
 --
 -- Hanya satu dokumen: handbook RWP. Lima kebijakan HC lain (cuti,
 -- remunerasi, kode etik, pelatihan, beasiswa) sengaja tidak dibawa —

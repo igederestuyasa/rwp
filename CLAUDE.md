@@ -80,12 +80,27 @@ semua laporan di sini adalah laporan RWP. `kategori` wajib salah satu dari
 
 ## 2. Database
 
-Empat berkas SQL di `web/scripts/`, dijalankan **berurutan** di project kosong:
+SQL ada di `web/supabase/` dengan tata letak Supabase CLI. Petunjuk lengkap:
+`web/supabase/README.md`.
 
-1. `01_schema.sql` — tabel, trigger, helper, RLS, view `v_reports_admin`, RPC
-2. `02_storage.sql` — bucket `rwp-evidence` & `policy-docs` + batas ukuran/MIME
-3. `03_seed_users.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
-4. `04_seed_policies.sql` — isi halaman Kebijakan
+**Migrasi** (`web/supabase/migrations/`) — mengubah bentuk database, dijalankan
+berurutan di setiap lingkungan:
+
+1. `20260101000100_baseline_schema.sql` — tabel, trigger, helper, RLS, view
+   `v_reports_admin`, RPC
+2. `20260101000200_storage_buckets.sql` — bucket `rwp-evidence` & `policy-docs`
+   + batas ukuran/MIME
+
+**Seed** (`web/supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
+yang menampung laporan asli:
+
+3. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
+4. `02_policies.sql` — isi halaman Kebijakan
+
+Seluruh migrasi idempotent dan mencatat versinya sendiri ke
+`supabase_migrations.schema_migrations`, tabel yang sama dipakai Supabase CLI.
+**Jangan mengedit migrasi yang sudah pernah dijalankan** — `db push` tidak akan
+mengulanginya, jadi perubahannya tidak akan pernah sampai. Buat berkas baru.
 
 Tabel: `users`, `reports`, `report_evidence`, `report_messages`,
 `report_status_log`, `policies`, `rag_chunks`, `chat_sessions`, `chat_messages`,

@@ -1,8 +1,7 @@
 -- ============================================================
 -- RWP Hutama Karya — Skema database (Supabase / Postgres)
 -- ------------------------------------------------------------
--- Jalankan PERTAMA di Supabase SQL Editor pada project KOSONG.
--- Urutan lengkap:  01_schema → 02_storage → 03_seed_users → 04_seed_policies
+-- Migrasi pertama. Lihat web/supabase/README.md untuk cara menjalankannya.
 --
 -- Aplikasi ini hanya menangani satu jalur: pelaporan RWP. Tidak ada
 -- konsep "layanan HC" atau grup fungsi di sini — pembeda hak akses admin
@@ -505,3 +504,23 @@ end;
 $$;
 
 -- Selesai. Lanjut ke 02_storage.sql.
+
+
+-- ============================================================
+-- Catat versi migrasi ini.
+-- ------------------------------------------------------------
+-- Tabel ini milik Supabase CLI. Dengan menuliskannya sendiri, migrasi yang
+-- dijalankan manual lewat SQL Editor tetap terbaca oleh `supabase db push`
+-- nanti, sehingga tidak dijalankan dua kali.
+-- ============================================================
+create schema if not exists supabase_migrations;
+
+create table if not exists supabase_migrations.schema_migrations (
+    version    text primary key,
+    statements text[],
+    name       text
+);
+
+insert into supabase_migrations.schema_migrations (version, name)
+values ('20260101000100', 'baseline_schema')
+on conflict (version) do nothing;
