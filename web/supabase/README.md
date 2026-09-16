@@ -10,7 +10,8 @@ supabase/
 │   ├── 20260101000200_storage_buckets.sql   bucket rwp-evidence & policy-docs
 │   ├── 20260101000300_korpus_admin.sql      tabel corpus_documents + RLS tulis admin (korpus AI)
 │   ├── 20260101000400_rag_chunk_index.sql   kolom chunk_index (urutan potongan)
-│   └── 20260101000500_pengerasan_rls.sql    hasil audit: tutup celah RLS users/reports/storage
+│   ├── 20260101000500_pengerasan_rls.sql    hasil audit: tutup celah RLS users/reports/storage
+│   └── 20260101000600_indeks_dan_policy.sql indeks yang hilang + policy anak lewat helper definer
 └── seeds/                                   ISI awal, bukan skema
     ├── 01_users_demo.sql                    profil 3 akun demo
     └── 02_policies.sql                      handbook RWP untuk halaman /kebijakan

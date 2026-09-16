@@ -104,12 +104,16 @@ berurutan di setiap lingkungan:
    berjalan sebagai pemilik dengan saringan `is_admin()`), bucket
    `rwp-evidence` diikat ke pemilik laporan/admin, `with check` pada
    update `chat_sessions`, helper `pemilik_laporan()`
+6. `20260101000600_indeks_dan_policy.sql` — indeks kolom policy/FK yang
+   hilang; policy tabel anak memakai helper definer `pemilik_laporan()` /
+   `pemilik_sesi_chat()` dan `(select auth.uid())` alih-alih subquery per
+   baris. Makna kebijakan tidak berubah.
 
 **Seed** (`web/supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
 yang menampung laporan asli:
 
-6. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
-7. `02_policies.sql` — isi halaman Kebijakan
+7. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
+8. `02_policies.sql` — isi halaman Kebijakan
 
 Seluruh migrasi idempotent dan mencatat versinya sendiri ke
 `supabase_migrations.schema_migrations`, tabel yang sama dipakai Supabase CLI.
@@ -155,6 +159,13 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
 
 - **Endpoint hanya menyentuh `rag_chunks`.** Tidak pernah `reports`,
   `report_messages`, atau identitas. Ini aturan keras (§9.3).
+- **Input route divalidasi skema `zod`** (`SkemaTanya` di `api/asisten`,
+  `SkemaIngest`/`SkemaDariKebijakan`/`SkemaIdDokumen` + `bacaBody()` di
+  `lib/korpusServer.ts`). Modul server (`llmClient`, `supabaseServer`,
+  `korpusServer`) dipagari `import "server-only"`. Pesan galat ke klien
+  adalah teks awam tetap; detail PostgREST/Storage/OpenAI hanya ke
+  `console.error`. Galat yang memang untuk admin dilempar sebagai
+  `GalatAdmin` supaya pesannya boleh diteruskan.
 - **Batas topik**: RWP, aplikasi ini, dan Layanan Psikologi. Pertanyaan HC lain
   (cuti, gaji, pelatihan) ditolak dan diarahkan ke tim HC.
 - **Korpus dikelola dari halaman admin `/korpus`**, bukan terminal. Admin
@@ -199,8 +210,14 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   wajib lewat `web/tailwind.config.js` yang direferensikan `@config` di `globals.css`.
 - Komponen bersama: primitif di `components/ui/` (`Button`, `Card`, `Field` termasuk
   `GlassSelect`, `Panel`) dan sistem HC Panel di `components/hc/` (`StatusLabel`,
-  `KosongHC`, `ItemCard`, `DetailPanel`, `SearchField`, `FilterTabs`, `DataTable`,
-  `GenerativeIcon`, `Logo`). Pakai ulang, jangan bikin varian baru.
+  `KosongHC`, `MemuatHC`, `ItemCard`, `DetailPanel`, `SearchField`, `FilterTabs`,
+  `DataTable`, `GenerativeIcon`, `Logo`). Pakai ulang, jangan bikin varian baru.
+- Keadaan halaman: `MemuatHC` saat data store belum tiba (`useStore().loading`),
+  `KosongHC` saat memang kosong. Kegagalan memuat (`useStore().error`) tampil
+  sebagai satu spanduk di `(app)/layout.tsx`, bukan per halaman. Galat render
+  ditangkap `app/error.tsx`, `(app)/error.tsx`, dan `global-error.tsx` lewat
+  `components/GalatHalaman.tsx`; 404 lewat `app/not-found.tsx`. Pesan galat
+  mentah tidak pernah dirender, hanya `digest`.
 - Prefix `rwp_` pada key `localStorage` dan nama bucket memang disengaja.
 
 ---
@@ -326,6 +343,13 @@ Ini pilot di free tier untuk pembuktian konsep. Sebelum menampung laporan RWP as
   sebagai pemilih tema yang berfungsi, dan `eslint-disable` mubazir di
   `login/page.tsx` ikut hilang saat berkas itu ditulis ulang.
 - `MIN_SIMILARITY` di `api/asisten/route.ts` masih warisan korpus lama.
+- `store.tsx` masih menarik seluruh `reports`, `report_messages`, dan
+  `report_status_log` ke browser (paginasi di memori). Cukup untuk skala
+  pilot; di atas ribuan pesan perlu pemuatan per laporan, yang berarti
+  mengubah kontrak `useStore` yang dipakai 30+ komponen. Pemuatannya sudah
+  paralel dan kolomnya eksplisit (audit batch 3).
+- Tipe Supabase belum di-generate (`supabase gen types`); mapper masih
+  mengetik baris secara manual di `lib/mappers.ts`.
 - Notifikasi belum realtime (data dari Supabase, status baca/dismiss di localStorage).
 - Belum ada dukungan PDF/DOCX di skrip ingest — konversi manual dulu ke `.md`.
 - `storage.ts` masih hardcode nama bucket.
