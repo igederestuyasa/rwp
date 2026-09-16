@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { List } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, ORG_NAME } from "@/lib/constants";
+import { Logo } from "@/components/hc/Logo";
 import { NotificationBell } from "@/components/NotificationBell";
 
 export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -18,34 +19,35 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-line bg-canvas/90 px-5 backdrop-blur-md sm:px-8">
-      {/* Mobile: hamburger + brand */}
-      <div className="flex items-center gap-1.5 md:hidden">
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-3 border-b border-garis bg-latar px-5 md:h-[72px] lg:px-10">
+      {/* Kiri: hamburger (hanya HP) + merek */}
+      <div className="flex min-w-0 items-center gap-1">
         <button
           onClick={onMenuClick}
           aria-label="Buka menu"
-          className="-ml-2 rounded-lg p-2 text-ink-secondary transition-colors hover:bg-surface-raised"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-redup transition-colors duration-150 hover:bg-kartu hover:text-tinta md:hidden"
         >
-          <Menu className="h-5 w-5" />
+          <List size={20} />
         </button>
-        <span className="flex items-center gap-2 font-bold text-ink">
-          <span className="text-accent">●</span> {APP_NAME}
+        <span className="flex min-w-0 items-center gap-2.5">
+          <Logo size={28} />
+          <span className="truncate text-isi font-bold text-tinta">{APP_NAME}</span>
         </span>
       </div>
-      <div className="hidden md:block" />
 
-      {/* Kanan: notifikasi + profil */}
-      <div className="flex items-stretch gap-2">
+      {/* Kanan: nama unit + notifikasi + profil */}
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="hidden text-bantu text-redup sm:block">{ORG_NAME}</span>
         <NotificationBell />
         <Link
           href="/profil"
-          className="flex items-center gap-3 rounded-xl border border-line bg-surface px-2.5 py-1.5 shadow-xs transition-all hover:border-line-strong hover:shadow-sm"
+          className="flex min-h-11 items-center gap-3 rounded-full border border-garis bg-kartu px-2 py-1 transition-colors duration-150 hover:border-garis-kuat"
         >
-          <div className="hidden text-right leading-tight sm:block">
-            <div className="text-sm font-semibold text-ink">{user.nama}</div>
-            <div className="text-xs capitalize text-ink-muted">{user.role}</div>
+          <div className="hidden pl-1.5 text-right leading-tight lg:block">
+            <div className="text-bantu font-semibold text-tinta">{user.nama}</div>
+            <div className="text-mikro capitalize text-redup">{user.role}</div>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-latar text-bantu font-bold text-tinta">
             {initials}
           </div>
         </Link>

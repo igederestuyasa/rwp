@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
+import { ORG_NAME } from "@/lib/constants";
 import { useIdleTimeout } from "@/lib/useIdleTimeout";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
@@ -21,49 +23,70 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!ready || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-ink-muted">
+      <div className="flex min-h-screen items-center justify-center text-bantu text-redup">
         Memuat…
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <div className="flex min-h-screen bg-latar">
+      {/* Lompat langsung ke konten — tersembunyi sampai difokus lewat keyboard. */}
+      <a
+        href="#konten"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-5 focus:top-5 focus:z-[10000] focus:flex focus:min-h-11 focus:items-center focus:rounded-full focus:border focus:border-garis-kuat focus:bg-kartu focus:px-5 focus:text-bantu focus:font-semibold focus:text-tinta"
+      >
+        Lewati ke konten
+      </a>
+
       <Sidebar />
       <MobileDrawer open={navOpen} onClose={() => setNavOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenuClick={() => setNavOpen(true)} />
-        <main className="flex-1 px-5 py-7 sm:px-8 lg:px-10">
-          <div className="mx-auto w-full max-w-5xl animate-in">{children}</div>
+
+        <main id="konten" tabIndex={-1} className="flex-1 focus:outline-none">
+          {/* Tepi halaman 20 di HP, 40 mulai 1024. Lebar maksimum 1240 termasuk tepi. */}
+          <div className="mx-auto w-full max-w-[1240px] px-5 pb-12 pt-6 lg:px-10 lg:pt-8">
+            {children}
+          </div>
         </main>
+
+        {/* Kaki halaman */}
+        <footer className="mx-auto w-full max-w-[1240px] px-5 lg:px-10">
+          <div className="flex flex-col gap-1 border-t border-garis pb-12 pt-6 text-bantu text-redup sm:flex-row sm:items-center sm:justify-between">
+            <span>{ORG_NAME}</span>
+            <span>
+              Kontak HC:{" "}
+              <a
+                href="mailto:hc@hutamakarya.co.id"
+                className="text-tinta underline-offset-4 hover:underline"
+              >
+                hc@hutamakarya.co.id
+              </a>
+            </span>
+          </div>
+        </footer>
       </div>
+
       {/* Modal peringatan idle — muncul 1 menit sebelum auto-logout */}
       {showWarning && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-              <svg
-                className="h-6 w-6 text-amber-600"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-latar/80 px-5">
+          <div className="w-full max-w-sm rounded-[var(--radius-panel)] border border-garis bg-kartu p-6">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-latar text-peringatan">
+              <Clock size={24} />
             </div>
-            <h2 className="mb-1 text-lg font-semibold text-slate-900 dark:text-white">
+            <h2 className="mb-1 text-subjudul font-bold text-tinta">
               Sesi hampir berakhir
             </h2>
-            <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mb-5 text-bantu text-redup">
               Kamu tidak aktif selama beberapa saat. Akan otomatis keluar dalam{" "}
-              <span className="font-semibold text-amber-600">{countdown} detik</span>.
+              <span className="font-semibold text-peringatan">{countdown} detik</span>.
             </p>
             <button
               onClick={resetIdle}
-              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="flex h-12 w-full items-center justify-center rounded-full bg-tinta text-bantu font-semibold text-kartu transition-colors duration-150 hover:bg-tinta-hover active:scale-[.99]"
             >
-              Tetap Masuk
+              Tetap masuk
             </button>
           </div>
         </div>

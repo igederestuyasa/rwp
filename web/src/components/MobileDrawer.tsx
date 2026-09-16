@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layers, LogOut, X } from "lucide-react";
+import { SignOut, X } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
 import { APP_NAME } from "@/lib/constants";
+import { Logo } from "@/components/hc/Logo";
 import { NAV, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -23,17 +24,20 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
       <Link
         href={item.href}
         onClick={onClose}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+          "group flex min-h-11 items-center gap-3 rounded-full px-3 text-bantu transition-colors duration-150",
           active
-            ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+            ? "bg-latar font-semibold text-tinta"
+            : "font-medium text-redup hover:bg-latar hover:text-tinta",
         )}
       >
-        <Icon className={cn(
-          "h-[18px] w-[18px] shrink-0",
-          active ? "text-violet-600 dark:text-violet-400" : "text-slate-400 dark:text-slate-500",
-        )} />
+        <Icon
+          className={cn(
+            "h-5 w-5 shrink-0 transition-colors",
+            active ? "text-tinta" : "text-redup group-hover:text-tinta",
+          )}
+        />
         {item.label}
       </Link>
     );
@@ -46,11 +50,11 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
         open ? "pointer-events-auto" : "pointer-events-none",
       )}
     >
-      {/* Latar gelap */}
+      {/* Latar peredup */}
       <div
         onClick={onClose}
         className={cn(
-          "absolute inset-0 bg-slate-900/40 transition-opacity duration-200",
+          "absolute inset-0 bg-latar/80 transition-opacity duration-200",
           open ? "opacity-100" : "opacity-0",
         )}
       />
@@ -58,43 +62,43 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
       {/* Panel laci */}
       <div
         className={cn(
-          "absolute left-0 top-0 flex h-full w-72 max-w-[80%] flex-col shadow-xl transition-transform duration-200",
-          "bg-white dark:bg-slate-900",
+          "absolute left-0 top-0 flex h-full w-72 max-w-[80%] flex-col transition-transform duration-200",
+          "border-r border-garis bg-kartu",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4 dark:border-slate-700/60">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#5B5BD6] to-[#9B5BD6] text-white shadow-md">
-              <Layers className="h-5 w-5" />
-            </div>
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{APP_NAME}</span>
-          </div>
+        <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-garis px-3">
+          <span className="flex min-w-0 items-center gap-2.5 pl-1">
+            <Logo size={28} />
+            <span className="truncate text-isi font-bold text-tinta">{APP_NAME}</span>
+          </span>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            aria-label="Tutup menu"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-redup transition-colors duration-150 hover:bg-latar hover:text-tinta"
           >
-            <X className="h-5 w-5" />
+            <X size={20} />
           </button>
         </div>
 
         {/* Nav utama */}
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {main.map((item) => <NavLink key={item.href} item={item} />)}
         </nav>
 
-        {/* Bawah: Pengaturan, Bantuan, Logout */}
-        <div className="px-3 pb-4">
-          <div className="mb-2 h-px bg-slate-100 dark:bg-slate-700/60" />
-          <div className="space-y-0.5">
+        {/* Bawah: Pengaturan, Bantuan, Log out */}
+        <div className="shrink-0 px-3 pb-4">
+          <div className="mb-2 h-px bg-garis" />
+          <div className="space-y-1">
             {bottom.map((item) => <NavLink key={item.href} item={item} />)}
           </div>
-          <div className="mt-2 h-px bg-slate-100 dark:bg-slate-700/60" />
+          <div className="mt-2 h-px bg-garis" />
           <button
             onClick={() => { onClose(); logout(); }}
-            className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-900/20 dark:hover:text-rose-400"
+            aria-label="Log out"
+            className="group mt-2 flex min-h-11 w-full items-center gap-3 rounded-full px-3 text-bantu font-medium text-redup transition-colors duration-150 hover:bg-latar hover:text-merah"
           >
-            <LogOut className="h-[18px] w-[18px] shrink-0 text-slate-400 dark:text-slate-500" />
+            <SignOut size={20} className="shrink-0 transition-colors group-hover:text-merah" />
             Log out
           </button>
         </div>
