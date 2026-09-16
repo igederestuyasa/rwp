@@ -46,6 +46,35 @@ export async function embed(text: string): Promise<number[]> {
   return json.data[0].embedding as number[];
 }
 
+/**
+ * Ubah banyak teks → banyak vektor dalam SATU panggilan API.
+ * Dipakai ingest korpus dari halaman admin. OpenAI mengembalikan data
+ * berurutan, tapi diurutkan ulang berdasarkan `index` supaya tidak
+ * bergantung pada asumsi itu. Pemanggil yang menentukan ukuran batch.
+ */
+export async function embedBatch(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) return [];
+  const key = assertKey();
+  const res = await fetch(`${OPENAI_BASE_URL}/embeddings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model: EMBED_MODEL, input: texts }),
+  });
+  if (!res.ok) {
+    throw new Error(`Embedding batch gagal (${res.status}): ${await res.text()}`);
+  }
+  const json = (await res.json()) as { data: { index: number; embedding: number[] }[] };
+  if (!Array.isArray(json.data) || json.data.length !== texts.length) {
+    throw new Error(`Embedding batch: jumlah hasil (${json.data?.length ?? 0}) ≠ jumlah teks (${texts.length}).`);
+  }
+  return [...json.data].sort((a, b) => a.index - b.index).map((d) => d.embedding);
+}
+
+/** Nama model embedding aktif — dicatat ke rag_chunks.embed_model & corpus_documents. */
+export function embedModelName(): string {
+  return EMBED_MODEL;
+}
+
 /** Panggil chat completion. Mengembalikan teks jawaban. */
 export async function chat(
   messages: ChatMessage[],

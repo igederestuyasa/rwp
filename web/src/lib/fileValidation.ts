@@ -105,3 +105,68 @@ export async function validateFiles(
 export function formatRejections(rejected: FileRejection[]): string {
   return rejected.map((r) => `${r.file} (${r.reason})`).join(", ");
 }
+
+
+// ============================================================
+// Dokumen KORPUS — unggahan admin untuk pengetahuan asisten AI (§9.3).
+// ------------------------------------------------------------
+// Sengaja terpisah dari aturan bukti laporan di atas: whitelist-nya beda
+// (hanya teks), dan berkas teks tidak punya tanda tangan byte, jadi
+// keasliannya dicek dengan cara lain — menolak byte NUL (ciri berkas
+// biner) dan mewajibkan UTF-8 yang valid lewat TextDecoder mode fatal.
+// PDF belum didukung di tahap ini (butuh ekstraksi teks server-side).
+// ============================================================
+
+export type JenisKorpus = "md" | "txt";
+
+export const KORPUS_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB, sama dengan batas bucket
+const KORPUS_MAX_FILE_SIZE_LABEL = "10 MB";
+const KORPUS_EXTENSIONS: JenisKorpus[] = ["md", "txt"];
+
+/** Untuk atribut <input accept> di halaman admin korpus. */
+export const KORPUS_ACCEPT_ATTR: string = KORPUS_EXTENSIONS.map((e) => "." + e).join(",");
+
+export function jenisKorpusDari(name: string): JenisKorpus | null {
+  const ext = extensionOf(name);
+  return (KORPUS_EXTENSIONS as string[]).includes(ext) ? (ext as JenisKorpus) : null;
+}
+
+export type HasilValidasiKorpus =
+  | { ok: true; jenis: JenisKorpus; teks: string }
+  | { ok: false; alasan: string };
+
+/**
+ * Validasi berkas korpus. Bisa dipanggil di browser maupun Route Handler
+ * (keduanya punya File/TextDecoder). Kalau lolos, teks hasil decode ikut
+ * dikembalikan supaya pemanggil tidak perlu membaca berkas dua kali.
+ */
+export async function validateKorpusFile(file: File): Promise<HasilValidasiKorpus> {
+  const jenis = jenisKorpusDari(file.name);
+  if (!jenis) return { ok: false, alasan: `tipe tidak didukung — hanya ${KORPUS_ACCEPT_ATTR}` };
+  if (file.size === 0) return { ok: false, alasan: "berkas kosong" };
+  if (file.size > KORPUS_MAX_FILE_SIZE) {
+    return { ok: false, alasan: `ukuran melebihi ${KORPUS_MAX_FILE_SIZE_LABEL}` };
+  }
+
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+  } catch {
+    return { ok: false, alasan: "gagal membaca berkas" };
+  }
+
+  // Byte NUL hampir tidak pernah muncul di teks sungguhan, tapi lazim di
+  // berkas biner yang ekstensinya diganti. Cukup periksa 8 KB awal.
+  const awal = bytes.subarray(0, 8192);
+  if (awal.includes(0)) return { ok: false, alasan: "isi berkas bukan teks" };
+
+  let teks: string;
+  try {
+    teks = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return { ok: false, alasan: "berkas bukan UTF-8 yang valid" };
+  }
+  if (teks.trim().length === 0) return { ok: false, alasan: "berkas tidak berisi teks" };
+
+  return { ok: true, jenis, teks };
+}
