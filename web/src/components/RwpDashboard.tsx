@@ -42,8 +42,8 @@ export interface PaletChart {
   kartu: string;
   latar: string;
   merah: string;
-  hangat: string;
-  /** Ramp data hangat (koral, persik, mawar, tanah, plum) — satu keluarga. */
+  lembut: string;
+  /** Ramp data pastel — lima rona berjauhan, tervalidasi dataviz. */
   data: string[];
 }
 
@@ -63,7 +63,7 @@ export function usePaletChart(): PaletChart {
       kartu: tokenWarna("--color-kartu"),
       latar: tokenWarna("--color-latar"),
       merah: tokenWarna("--color-merah"),
-      hangat: tokenWarna("--color-hangat"),
+      lembut: tokenWarna("--color-lembut"),
       data: [
         tokenWarna("--color-data-1"),
         tokenWarna("--color-data-2"),
@@ -351,7 +351,7 @@ export function RwpDashboard() {
                     itemStyle={tooltip.itemStyle}
                     cursor={{ fill: tooltip.cursorFill }}
                   />
-                  {/* Ramp data hangat — satu keluarga warna, bukan pelangi. */}
+                  {/* Ramp data pastel — lima rona berjauhan, bukan gradasi satu warna. */}
                   <Bar dataKey="value" name="Laporan" radius={[0, 4, 4, 0]} fill={palet.data[0]}>
                     {byKategori.map((d, i) => (
                       <Cell key={d.name} fill={palet.data[i % palet.data.length]} />

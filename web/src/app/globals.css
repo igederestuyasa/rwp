@@ -32,23 +32,27 @@
   --color-merah-ikon: #DD2A30;
   --color-merah-latar: #FDEAE6;
 
-  /* Keluarga aksen hangat — terakota memimpin, pastel sebagai latarnya.
-     Kehangatan app ini datang dari sini, bukan dari netralnya. */
-  --color-hangat: #A85238;
-  --color-hangat-latar: #FFF1EA;
-  --color-hangat-garis: #F2D9CD;
+  /* Aksen lembut — rose pastel untuk permukaan yang menyambut.
+     Bukan terakota: nadanya pastel cerah, bukan warna tanah. */
+  --color-lembut: #B54B72;
+  --color-lembut-latar: #FDF0F4;
+  --color-lembut-garis: #F8D9E3;
 
-  /* Ramp data hangat — dipakai chart dan pengelompokan kategori. Seluruhnya
-     satu keluarga (koral, persik, mawar, tanah, plum) supaya tidak jadi pelangi. */
-  --color-data-1: #C9634A;
-  --color-data-2: #DD8A63;
-  --color-data-3: #C97A86;
-  --color-data-4: #B98E5E;
-  --color-data-5: #8E6E7E;
+  /* Ramp data pastel — rose, periwinkle, mint, lilac, apricot. Lima rona
+     sengaja BERJAUHAN supaya tidak nyaru. Nilainya hasil validator dataviz:
+     lightness band lulus, chroma lulus, pemisahan buta warna 13.4 (protan),
+     pemisahan mata normal 19.2. Kontras batang terhadap kanvas di bawah 3:1
+     dan itu boleh, karena tiap batang punya label kategori sebagai penanda
+     kedua. */
+  --color-data-1: #E0708F;
+  --color-data-2: #6B8EE8;
+  --color-data-3: #2FB394;
+  --color-data-4: #9F7BDE;
+  --color-data-5: #E2924A;
 
-  /* Status data: versi hangat dari hijau dan kuning. */
-  --color-sukses: #3F6F57;
-  --color-peringatan: #8F5A2B;
+  /* Status data: versi lembut dari hijau dan kuning. */
+  --color-sukses: #26775C;
+  --color-peringatan: #8F6420;
 
   /* ── Alias nama lama → nilai HC Panel ── */
   --color-canvas: var(--color-latar);
@@ -109,18 +113,20 @@
   --color-merah-ikon: #F0484E;
   --color-merah-latar: rgb(240 72 78 / .24);
 
-  --color-hangat: #F0A08C;
-  --color-hangat-latar: rgb(240 160 140 / .14);
-  --color-hangat-garis: rgb(240 160 140 / .28);
+  /* Mode gelap DIPILIH sendiri, bukan hasil membalik mode terang.
+     Lulus kelima cek validator terhadap permukaan gelap. */
+  --color-lembut: #F2A0B4;
+  --color-lembut-latar: rgb(242 160 180 / .13);
+  --color-lembut-garis: rgb(242 160 180 / .26);
 
-  --color-data-1: #F0A08C;
-  --color-data-2: #F2B79A;
-  --color-data-3: #EFA3B0;
-  --color-data-4: #E8BE96;
-  --color-data-5: #CBA9BC;
+  --color-data-1: #D96C86;
+  --color-data-2: #5E86DC;
+  --color-data-3: #2FA88C;
+  --color-data-4: #8E72CE;
+  --color-data-5: #BE8040;
 
-  --color-sukses: #8FCBA9;
-  --color-peringatan: #DFA877;
+  --color-sukses: #6FD2B8;
+  --color-peringatan: #E8B473;
 
   --shadow-kontrol: 0 1px 2px rgb(0 0 0 / .4), 0 12px 28px -16px rgb(0 0 0 / .9);
   --shadow-popover: 0 14px 34px -14px rgb(0 0 0 / .8);

@@ -37,9 +37,9 @@ export function KosongHC({
     <div
       className={cn(
         "flex flex-col items-center rounded-[var(--radius-kartu)]",
-        // Keadaan kosong itu ajakan, bukan kegagalan — diberi latar hangat lembut
+        // Keadaan kosong itu ajakan, bukan kegagalan — diberi latar lembut lembut
         // sesuai §Token warna.
-        "border border-dashed border-hangat-garis bg-hangat-latar px-6 py-8 text-center",
+        "border border-dashed border-lembut-garis bg-lembut-latar px-6 py-8 text-center",
         className,
       )}
     >

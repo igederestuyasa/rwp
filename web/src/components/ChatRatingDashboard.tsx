@@ -261,7 +261,7 @@ export function ChatRatingDashboard() {
                       cursor={{ fill: tooltip.cursorFill }}
                       formatter={(v) => [v, "Ulasan"]}
                     />
-                    {/* Ramp data hangat — satu keluarga warna per jumlah bintang. */}
+                    {/* Ramp data pastel — satu rona per jumlah bintang. */}
                     <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48} fill={palet.data[0]}>
                       {distribution.map((d, i) => (
                         <Cell key={d.stars} fill={palet.data[i % palet.data.length]} />

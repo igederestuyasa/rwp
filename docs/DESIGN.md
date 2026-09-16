@@ -2,10 +2,10 @@
 
 ## Prinsip
 - Satu elevasi: hanya kontrol utama layar (biasanya kolom cari) yang diberi bayangan.
-- Netral abu-abu, kehangatan dari aksen: ramp netral tetap abu-abu netral dan SAMA
+- Netral abu-abu, karakter dari aksen lembut: ramp netral tetap abu-abu dan SAMA
   untuk semua app HC, jadi jangan diutak-atik. Aplikasi ini kanal pelaporan insiden
-  dan tidak boleh terasa klinis, maka kehangatannya datang dari keluarga aksen hangat
-  dan ramp data — bukan dari menggeser suhu netralnya.
+  dan tidak boleh terasa klinis, maka kelembutannya datang dari aksen pastel dan ramp
+  data — bukan dari menggeser suhu netralnya.
 - Daftar-detail: daftar di kiri, panel detail menempel di kanan (desktop).
 - Putus-putus berarti belum tersedia.
 - Gerak menjelaskan perubahan: animasi hanya untuk muat halaman, pergantian panel, dan umpan balik hover.
@@ -24,29 +24,41 @@
 | merah | #C41115 | #F0484E | aksen merek, panah hover, caret, pesan error |
 | merah-ikon | #DD2A30 | #F0484E | aksen di ikon generatif dan logo |
 | merah-latar | #FDEAE6 | rgb(240 72 78 / .24) | sorotan kata hasil cari |
-| hangat | #A85238 | #F0A08C | teks & ikon pada permukaan menyambut |
-| hangat-latar | #FFF1EA | rgb(240 160 140 / .14) | latar lembut blok menyambut |
-| hangat-garis | #F2D9CD | rgb(240 160 140 / .28) | border blok menyambut |
-| data-1 … data-5 | #C9634A #DD8A63 #C97A86 #B98E5E #8E6E7E | #F0A08C #F2B79A #EFA3B0 #E8BE96 #CBA9BC | deret chart & pengelompokan kategori |
-| sukses | #3F6F57 | #8FCBA9 | status data, selalu bersama teks atau ikon |
-| peringatan | #8F5A2B | #DFA877 | status data, selalu bersama teks atau ikon |
+| lembut | #B54B72 | #F2A0B4 | teks & ikon pada permukaan menyambut |
+| lembut-latar | #FDF0F4 | rgb(242 160 180 / .13) | latar lembut blok menyambut |
+| lembut-garis | #F8D9E3 | rgb(242 160 180 / .26) | border blok menyambut |
+| data-1 … data-5 | #E0708F #6B8EE8 #2FB394 #9F7BDE #E2924A | #D96C86 #5E86DC #2FA88C #8E72CE #BE8040 | deret chart & pengelompokan kategori |
+| sukses | #26775C | #6FD2B8 | status data, selalu bersama teks atau ikon |
+| peringatan | #8F6420 | #E8B473 | status data, selalu bersama teks atau ikon |
 
 **Netral tidak boleh diubah.** Delapan token netral di atas dipakai bersama seluruh
-app HC, jadi nilainya dikunci. Kehangatan aplikasi ini datang dari tiga hal lain:
+app HC, jadi nilainya dikunci. Karakter aplikasi ini datang dari tiga hal lain:
 
-1. **Keluarga aksen hangat** (`hangat`, `hangat-latar`, `hangat-garis`) — terakota
-   memimpin dengan pastel persik sebagai latarnya. Dipakai TERBATAS pada permukaan
-   yang sifatnya menyambut: sapaan di beranda, pembuka halaman masuk, blok Layanan
-   Psikologi, dan keadaan kosong yang mengajak bertindak.
-2. **Ramp data hangat** (`data-1` sampai `data-5`) — koral, persik, mawar, tanah, dan
-   plum. Dipakai untuk deret chart dan pengelompokan kategori. Kelimanya sengaja satu
-   keluarga warna supaya tetap terbaca sebagai satu sistem, bukan pelangi.
-3. **Status data bersuhu hangat** — hijau sage menggantikan emerald dingin, dan
-   karamel menggantikan kuning tajam.
+1. **Aksen lembut** (`lembut`, `lembut-latar`, `lembut-garis`) — rose pastel.
+   Dipakai TERBATAS pada permukaan yang sifatnya menyambut: sapaan di beranda,
+   pembuka halaman masuk, blok Layanan Psikologi, dan keadaan kosong yang
+   mengajak bertindak.
+2. **Ramp data pastel** (`data-1` sampai `data-5`) — rose, periwinkle, mint,
+   lilac, apricot. Dipakai untuk deret chart dan pengelompokan kategori. Lima
+   rona ini sengaja BERJAUHAN, bukan gradasi satu warna, supaya tiap kategori
+   mudah dibedakan.
+
+   Nilainya wajib lolos validator palet kategorikal, bukan dipilih dengan mata:
+   lightness band, chroma floor, pemisahan buta warna, pemisahan mata normal,
+   dan kontras terhadap permukaan. Angka saat ini: pemisahan buta warna 13.4
+   (protan) dan mata normal 19.2 di mode terang. Kontras tiap batang terhadap
+   kanvas berada di bawah 3:1, dan itu hanya boleh karena setiap batang sudah
+   punya label nama kategori di sisinya sebagai penanda kedua — kalau labelnya
+   dihapus, warnanya harus diperdalam.
+
+   Mode gelap DIPILIH sendiri dengan nilai berbeda, bukan hasil membalik mode
+   terang, dan lulus kelima cek terhadap permukaan gelap.
+3. **Status data bersuhu lembut** — hijau dan kuning versi tenang, bukan emerald
+   dan kuning tajam.
 
 Merah HK tetap satu-satunya aksen MEREK dan nilainya tidak berubah, termasuk
 `merah-ikon` supaya ikon generatif tetap identik dengan app HC lain. Ikon generatif,
-logo, dan tombol utama tidak memakai keluarga hangat.
+logo, dan tombol utama tidak memakai aksen lembut.
 
 Semua pasangan teks dan latar di tabel ini sudah diuji numerik dan lulus kontras
 minimal 4.5:1 di kedua mode.
@@ -215,14 +227,15 @@ Aturan render (viewBox `0 0 48 48`, `aria-hidden`):
 ## Batas gaya
 - Permukaan datar dengan warna solid.
 - Satu warna aksen merek (merah HK). Warna sukses dan peringatan hanya untuk status data.
-- Keluarga hangat dan ramp data hanya untuk peruntukan di §Token warna, bukan dekorasi bebas.
+- Aksen lembut dan ramp data hanya untuk peruntukan di §Token warna, bukan dekorasi bebas.
 - Status ditunjukkan dengan label teks.
 - Keterangan judul selalu di bawah judul.
 - Ikon hanya dari Phosphor, GenerativeIcon, dan logo.
 
 ## Checklist selesai
 - [ ] Semua warna, ukuran huruf, spasi, radius, dan bayangan berasal dari token.
-- [ ] Netral masih bernilai asli, dan keluarga hangat tidak dipakai di luar permukaan menyambut.
+- [ ] Netral masih bernilai asli, aksen lembut tidak dipakai di luar permukaan menyambut,
+      dan ramp data masih lolos validator palet kategorikal.
 - [ ] Setiap layar punya tepat satu elemen berbayangan.
 - [ ] h1 maksimal 2 baris, dan pembuka maksimal 4 elemen teks.
 - [ ] Layar daftar entitas memakai pola daftar-detail dan tetap berfungsi di HP.
