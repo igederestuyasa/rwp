@@ -3,8 +3,9 @@
 // policies) sebagai dokumen korpus, supaya jawaban asisten bersumber dari
 // baris DB yang SAMA dengan yang dibaca karyawan di /kebijakan.
 // ------------------------------------------------------------
-// Ini pengganti scripts/build-corpus.mjs yang dulu mengambil handbook dari
-// lib/policies.ts (kode) — akar drift antara halaman kebijakan dan AI.
+// Ini pengganti skrip terminal lama (build-corpus.mjs, sudah dihapus) yang
+// mengambil handbook dari lib/policies.ts (kode) — akar drift antara
+// halaman kebijakan dan AI.
 // Route ini hanya MENDAFTARKAN; pemrosesannya lewat /api/korpus/ingest
 // seperti dokumen lain. source_doc memakai awalan "kebijakan:" agar satu
 // kebijakan selalu memetakan ke satu dokumen korpus (upsert).

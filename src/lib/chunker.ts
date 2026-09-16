@@ -1,24 +1,20 @@
 // ============================================================
-// Chunker heading-aware — PORT 1:1 dari scripts/ingest.mjs (server-side).
+// Chunker heading-aware (server-side) — SATU-SATUNYA pemecah dokumen korpus.
 // ------------------------------------------------------------
-// Sumber kebenaran logika: scripts/ingest.mjs, blok "Chunking HEADING-AWARE
-// v2" (parseFrontMatter → buildMetaPrefix → segmentLines → splitLongTable →
-// parseSections → splitBody → chunkText). File ini memindahkan logika itu ke
-// TypeScript TANPA mengubah perilaku: regex, urutan pemeriksaan, ambang
-// karakter, dan cara menggabungkan pasal pendek semuanya sama.
+// Alur: parseFrontMatter → buildMetaPrefix → segmentLines → splitLongTable →
+// parseSections → splitBody → chunkText → chunkToTexts. Awalnya port 1:1
+// dari skrip terminal lama (ingest.mjs, sudah dihapus); saat dipindahkan,
+// keluaran `chunkToTexts()` diverifikasi IDENTIK elemen demi elemen dengan
+// skrip itu, jadi chunk yang sudah ada di korpus sebanding dengan hasil
+// kode ini.
 //
-// PARITAS: keluaran `chunkToTexts()` diverifikasi IDENTIK (elemen demi
-// elemen) dengan string yang dikirim ingest.mjs ke embedBatch, untuk seluruh
-// dokumen hasil `node scripts/build-corpus.mjs`. Kalau logika di sini perlu
-// berubah, ubah ingest.mjs juga (atau sebaliknya) dan uji ulang paritasnya —
-// korpus yang di-embed dengan chunker berbeda akan menghasilkan chunk yang
-// tidak sebanding.
+// Kalau logika di sini berubah, SEMUA dokumen wajib diproses ulang dari
+// halaman /korpus — korpus yang di-embed dengan chunker berbeda akan
+// menghasilkan chunk yang tidak sebanding.
 //
-// Perbedaan bentuk API (bukan perilaku):
-//  - `chunkText()` JS asli langsung mengembalikan string[]. Di sini langkah
-//    itu dipecah dua: `chunkText()` mengembalikan objek `Chunk[]` (bentuk
-//    internal sebelum map terakhir), dan `chunkToTexts()` melakukan map
-//    `prefix\n\nbody` yang sama persis dengan baris terakhir chunkText JS.
+// Bentuk API: `chunkText()` mengembalikan objek `Chunk[]` (bentuk internal),
+// dan `chunkToTexts()` memetakannya ke string `prefix\n\nbody` yang dikirim
+// ke embedding.
 //
 // Server-only secara peruntukan (dipakai Route Handler / skrip Node). Tidak
 // ada import sama sekali — murni operasi string — sehingga aman dari sisi
@@ -56,7 +52,7 @@ interface Segment {
 }
 
 /**
- * Bentuk internal chunk — sama dengan objek `raw`/`merged` di ingest.mjs.
+ * Bentuk internal chunk sebelum dipetakan ke string final.
  * `len` = panjang `body` (tanpa prefix), dipakai untuk keputusan merge.
  */
 export interface Chunk {
@@ -301,8 +297,8 @@ export function splitBody(body: string, blockquoteCtx = ""): string[] {
 
 // ---- chunkText ----
 /**
- * Potong dokumen jadi chunk (bentuk internal). Setara dengan chunkText() di
- * ingest.mjs SEBELUM baris `merged.map(...)` terakhir — lihat chunkToTexts().
+ * Potong dokumen jadi chunk (bentuk internal). String finalnya dibentuk
+ * chunkToTexts().
  */
 export function chunkText(text: string): Chunk[] {
   const { docTitle, sections } = parseSections(text);
@@ -346,9 +342,9 @@ export function chunkText(text: string): Chunk[] {
 
 // ---- chunkToTexts ----
 /**
- * String final siap embed — PERSIS sama dengan nilai balik chunkText() di
- * ingest.mjs (yang lalu dikirim apa adanya ke embedBatch dan disimpan sebagai
- * `rag_chunks.chunk_text`). Ini yang dibandingkan pada uji paritas.
+ * String final siap embed: `prefix\n\nbody` per chunk. Dikirim apa adanya ke
+ * embedBatch dan disimpan sebagai `rag_chunks.chunk_text`. Ini bentuk yang
+ * dulu dibandingkan pada uji paritas dengan skrip terminal lama.
  */
 export function chunkToTexts(text: string): string[] {
   return chunkText(text).map((c) => (c.prefix ? `${c.prefix}\n\n${c.body}` : c.body));

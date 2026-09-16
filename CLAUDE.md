@@ -92,39 +92,32 @@ SQL ada di `supabase/` dengan tata letak Supabase CLI. Petunjuk lengkap:
 `supabase/README.md`.
 
 **Migrasi** (`supabase/migrations/`) — mengubah bentuk database, dijalankan
-berurutan di setiap lingkungan:
+di setiap lingkungan. Hanya ada **satu** berkas:
 
-1. `20260101000100_baseline_schema.sql` — tabel, trigger, helper, RLS, view
-   `v_reports_admin`, RPC
-2. `20260101000200_storage_buckets.sql` — bucket `rwp-evidence` & `policy-docs`
-   + batas ukuran/MIME
-3. `20260101000300_korpus_admin.sql` — tabel `corpus_documents`, RLS tulis
-   admin pada `rag_chunks`/`policies`/bucket `policy-docs`, backfill dokumen
-   warisan skrip lama
-4. `20260101000400_rag_chunk_index.sql` — kolom `rag_chunks.chunk_index`
-   (urutan potongan; insert per batch membuat `created_at` seragam sehingga
-   urutan asli tidak bisa dipulihkan tanpa kolom ini)
-5. `20260101000500_pengerasan_rls.sql` — hasil audit: hapus
-   `users_insert_self`, `users_select` baris sendiri, admin tidak membaca
-   tabel `reports` langsung (hanya lewat `v_reports_admin` yang kini
-   berjalan sebagai pemilik dengan saringan `is_admin()`), bucket
-   `rwp-evidence` diikat ke pemilik laporan/admin, `with check` pada
-   update `chat_sessions`, helper `pemilik_laporan()`
-6. `20260101000600_indeks_dan_policy.sql` — indeks kolom policy/FK yang
-   hilang; policy tabel anak memakai helper definer `pemilik_laporan()` /
-   `pemilik_sesi_chat()` dan `(select auth.uid())` alih-alih subquery per
-   baris. Makna kebijakan tidak berubah.
+- `20260916000000_skema_rwp.sql` — seluruh skema dalam keadaan akhirnya:
+  tabel, trigger, helper definer (`is_admin`, `can_escalate`,
+  `pemilik_laporan`, `pemilik_sesi_chat`), RLS, view `v_reports_admin`,
+  RPC, bucket `rwp-evidence` & `policy-docs` beserta policy storage-nya.
+  Ini leburan dari enam migrasi terdahulu (baseline, storage, korpus admin,
+  `chunk_index`, pengerasan RLS, indeks & policy); hasilnya diverifikasi
+  identik lewat `pg_dump`, termasuk saat dijalankan di atas database yang
+  sudah memakai enam migrasi lama.
 
 **Seed** (`supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
 yang menampung laporan asli:
 
-7. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
-8. `02_policies.sql` — isi halaman Kebijakan
+- `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
+- `02_policies.sql` — isi halaman Kebijakan (teks yang sama dengan
+  `lib/policies.ts`; ubah keduanya bersamaan)
 
-Seluruh migrasi idempotent dan mencatat versinya sendiri ke
-`supabase_migrations.schema_migrations`, tabel yang sama dipakai Supabase CLI.
+Migrasi idempotent dan tidak memuat perintah penghapusan data.
 **Jangan mengedit migrasi yang sudah pernah dijalankan** — `db push` tidak akan
-mengulanginya, jadi perubahannya tidak akan pernah sampai. Buat berkas baru.
+mengulanginya, jadi perubahannya tidak akan pernah sampai. Buat berkas baru,
+dan **jangan menyisipkan versinya sendiri** ke
+`supabase_migrations.schema_migrations` dari dalam berkas: CLI mencatatnya
+dengan `insert` biasa setelah berkas selesai, jadi baris yang sudah ada
+membuat `db push` gagal. Migrasi yang dijalankan lewat SQL Editor dicatat
+dengan `supabase migration repair --status applied <versi>`.
 
 Tabel: `users`, `reports`, `report_evidence`, `report_messages`,
 `report_status_log`, `policies`, `rag_chunks`, `corpus_documents`, `chat_sessions`,
@@ -139,8 +132,8 @@ RPC: `change_report_status`, `reveal_reporter`, `match_rag_chunks`,
   anonim **atau** pembacanya tidak ber-`can_escalate`. Penegakannya harus tetap di
   SQL. Pernah terjadi: pembatasan hanya ada di JSX sementara `store.tsx` melakukan
   `select("*")`, jadi setiap admin sebenarnya sudah memegang identitas pelapor.
-- **Admin tidak boleh membaca tabel `reports` langsung.** Sejak migrasi
-  `pengerasan_rls`, `reports_select` hanya untuk pelapor; admin membaca lewat
+- **Admin tidak boleh membaca tabel `reports` langsung.** Sejak audit
+  pengerasan RLS, `reports_select` hanya untuk pelapor; admin membaca lewat
   `v_reports_admin` (berjalan sebagai pemilik, saring `is_admin()` di dalam,
   tanpa `reporter_id`). Menambah klausa `is_admin()` ke `reports_select` akan
   membuka kembali `reporter_id` lewat REST dan mematikan audit `reveal_reporter`.
@@ -193,10 +186,11 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   pada halaman statis yang dimuat langsung dengan `?pilih=` di URL,
   `router.replace` terbukti diam saja, dan cara native ini didokumentasikan
   Next sebagai jalur yang tersinkron dengan `useSearchParams`.
-- Skrip lama `scripts/ingest.mjs`, `manage-docs.mjs`, `build-corpus.mjs` masih
-  ada sebagai cadangan selama transisi; `lib/chunker.ts` adalah port 1:1
-  dengan paritas teruji, jadi hasilnya sama. Dokumen cara-pakai di
-  `scripts/corpus/` diunggah lewat UI.
+- Skrip terminal lama (`ingest.mjs`, `manage-docs.mjs`, `build-corpus.mjs`)
+  **sudah dihapus**; `lib/chunker.ts` adalah satu-satunya pemecah dokumen
+  (paritasnya dengan skrip lama diverifikasi saat dipindahkan). Kalau
+  logikanya berubah, semua dokumen wajib diproses ulang dari `/korpus`.
+  Dokumen cara-pakai di `scripts/corpus/` diunggah lewat UI.
 - **`MIN_SIMILARITY` harus dari data**, bukan dari angka yang beredar umum.
   Jalankan `scripts/diagnose-retrieval.mjs` setiap kali korpus berubah. Nilai
   sekarang masih warisan korpus lama dan perlu disetel ulang. Latar belakang
@@ -293,10 +287,12 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   - Simpan di Supabase Storage, jangan di server app, jangan pernah di-execute.
 
 ### 9.5 Secret & kredensial
-- **[MVP]** Semua kredensial (`ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`)
-  di `.env`. `.env` WAJIB di `.gitignore`. Sediakan `.env.example` tanpa nilai asli.
+- **[MVP]** Semua kredensial (`OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+  anon key) di `.env.local`. `.env*` WAJIB di `.gitignore`. Sediakan
+  `.env.local.example` tanpa nilai asli.
 - **[MVP]** Repo **private**. Dokumen RWP asli & data laporan JANGAN di-commit.
-- **[MVP]** Di Streamlit Cloud, pakai **Secrets manager**, bukan file yang di-push.
+- **[MVP]** Di Vercel, isi lewat *Project Settings → Environment Variables*,
+  bukan file yang di-push.
 - **[MVP]** Semua pemanggilan API lewat backend; jangan taruh secret di sisi client.
 - **[MVP]** Kalau secret pernah ter-commit: **revoke & rotate** (jejak tetap ada di
   git history).
@@ -309,7 +305,7 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
 - Catatan: dummy account MVP OK, tapi tandai jelas BUKAN untuk produksi.
 
 ### 9.7 Operasional & data
-- **[MVP]** Akses lewat HTTPS (Streamlit Cloud default).
+- **[MVP]** Akses lewat HTTPS (Vercel default).
 - **[MVP]** Logging hati-hati: JANGAN nge-log isi laporan / identitas ke log mentah.
 - **[PROD]** Backup data laporan yang andal (free tier Supabase terbatas).
 - **[PROD]** Kebijakan retensi & penghapusan data (data sensitif menganggur =
@@ -357,6 +353,7 @@ Ini pilot di free tier untuk pembuktian konsep. Sebelum menampung laporan RWP as
 - Tipe Supabase belum di-generate (`supabase gen types`); mapper masih
   mengetik baris secara manual di `lib/mappers.ts`.
 - Notifikasi belum realtime (data dari Supabase, status baca/dismiss di localStorage).
-- Belum ada dukungan PDF/DOCX di skrip ingest — konversi manual dulu ke `.md`.
+- Korpus belum menerima PDF/DOCX — konversi manual dulu ke `.md` sebelum
+  diunggah di `/korpus`.
 - `storage.ts` masih hardcode nama bucket.
-- Belum di-deploy; belum ada PWA.
+- Belum ada PWA.

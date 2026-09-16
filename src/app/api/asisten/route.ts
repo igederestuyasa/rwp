@@ -24,8 +24,8 @@ const MIN_SIMILARITY = 0.41; // ⚠️ WAJIB DIKALIBRASI ULANG untuk korpus RWP.
 // cara pakai), sehingga distribusinya bergeser: distraktor hilang, tapi query di
 // luar topik pun tetap menarik chunk RWP teratas — jadi jarak relevan↔noise
 // MENYEMPIT dan ambangnya kemungkinan perlu NAIK, bukan turun.
-// Cara menyetel: node scripts/build-corpus.mjs → node scripts/ingest.mjs --clear
-// → node scripts/diagnose-retrieval.mjs, lalu pakai angka rekomendasinya.
+// Cara menyetel: isi korpus dari halaman /korpus, lalu jalankan
+// `node scripts/diagnose-retrieval.mjs` dan pakai angka rekomendasinya.
 // Angka tabel umum (0.70-0.80) TIDAK berlaku untuk query pendek vs chunk prosa di
 // pgvector + text-embedding-3-small — itu sudah terbukti salah di setup ini.
 

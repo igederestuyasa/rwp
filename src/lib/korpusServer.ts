@@ -128,8 +128,8 @@ export async function ambilTeksSumber(supabase: SupabaseClient, dok: SumberDokum
     if (error) throw new GalatAdmin("Gagal membaca kebijakan sumber.", error);
     if (!data) throw new GalatAdmin("Kebijakan sumber tidak ditemukan.");
     if (!data.markdown) throw new GalatAdmin("Kebijakan tidak punya isi Markdown.");
-    // Sama seperti build-corpus.mjs dulu: judul jadi heading utama, supaya
-    // hasil chunk handbook tidak berubah dibanding jalur skrip lama.
+    // Judul jadi heading utama — bentuk yang sama dengan jalur skrip lama,
+    // supaya chunk handbook yang sudah ada di korpus tetap sebanding.
     return `# ${data.title}\n\n${data.markdown.trim()}\n`;
   }
   if (!dok.storage_path) {

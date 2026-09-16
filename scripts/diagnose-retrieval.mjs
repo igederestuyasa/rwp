@@ -1,5 +1,5 @@
 // ============================================================
-// Diagnostik retrieval HCsisten — ukur similarity score asli.
+// Diagnostik retrieval Sahabat RWP — ukur similarity score asli.
 // ------------------------------------------------------------
 // Pakai: node scripts/diagnose-retrieval.mjs
 //

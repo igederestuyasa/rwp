@@ -1,9 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -m py_compile core/uploads.py core/db.py features/report_form.py)",
-      "Bash(python -c \"import core.uploads as u; print\\('PDF sniff:', u.sniff_type\\(b'%PDF-1.4 ...'\\)\\); print\\('PNG sniff:', u.sniff_type\\(b'\\\\x89PNG\\\\r\\\\n\\\\x1a\\\\n'\\)\\); print\\('JPG sniff:', u.sniff_type\\(b'\\\\xff\\\\xd8\\\\xff\\\\xe0'\\)\\); print\\('unknown:', u.sniff_type\\(b'hello world'\\)\\); ok,msg,mime,ext=u.validate\\('x.png', b'%PDF-1.4'\\); print\\('mismatch test ->', ok, msg\\)\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)"
     ]
   }
 }
