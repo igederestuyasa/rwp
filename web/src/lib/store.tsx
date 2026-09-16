@@ -6,6 +6,8 @@
 //
 // Kontrak dijaga: { reports, messages, logs, addReport, addMessage, changeStatus }.
 // Perubahan signature: addReport kini async (Promise<Report>) — call site di-await.
+// Tambahan (hasil audit): `loading` dan `error`, supaya halaman bisa membedakan
+// "belum tiba" / "gagal memuat" dari "memang kosong".
 import {
   createContext, useCallback, useContext, useEffect, useState, type ReactNode,
 } from "react";
@@ -15,6 +17,7 @@ import { useAuth } from "./auth";
 import { getSupabase, USE_MOCK } from "./supabaseClient";
 import {
   reportFromRow, reportToInsert, messageFromRow, statusLogFromRow, encodeAttachments,
+  type ReportRow, type MessageRow, type StatusLogRow,
 } from "./mappers";
 import { uploadEvidence, uploadAttachments } from "./storage";
 import type { ChatMessage, EvidenceFile, Report, Role, Status, StatusLog } from "./types";
@@ -23,6 +26,20 @@ import { makeTicketNo, withTimeout } from "./utils";
 // Batas waktu fetch Supabase — kalau request menggantung (mis. browser
 // blokir supabase.co), refresh() menyerah daripada nunggu selamanya.
 const FETCH_TIMEOUT_MS = 12000;
+
+// Kolom yang benar-benar dipakai mapper — kolom baru di DB tidak otomatis
+// ikut terkirim ke browser (§9.1: jangan tampilkan lebih dari yang perlu).
+const KOLOM_LAPORAN =
+  "id, ticket_no, kategori, judul, kronologi, tanggal_kejadian, lokasi, terlapor, is_anonymous, status, created_at, updated_at, resolved_at";
+const KOLOM_LAPORAN_ADMIN = `${KOLOM_LAPORAN}, reporter_name, reporter_nik`;
+const KOLOM_PESAN = "id, report_id, sender_role, message, attachments, created_at";
+const KOLOM_LOG = "id, report_id, from_status, to_status, note, attachments, created_at";
+
+/** Baris v_reports_admin: kolom laporan + identitas yang sudah disaring SQL. */
+type ReportRowAdmin = ReportRow & { reporter_name?: string | null; reporter_nik?: string | null };
+
+const PESAN_GAGAL_MUAT =
+  "Data laporan belum bisa dimuat dari server. Periksa koneksi, lalu coba lagi.";
 
 interface NewReportInput {
   kategori: string;
@@ -47,6 +64,10 @@ interface StoreValue {
   /** Buka identitas pelapor anonim (eskalasi berotorisasi, dicatat di audit log). */
   revealReporter: (reportId: string, reason: string) => Promise<{ nama: string; nik: string }>;
   refresh: () => Promise<void>;
+  /** Pemuatan pertama dari Supabase belum selesai (selalu false di mode mock). */
+  loading: boolean;
+  /** Pemuatan terakhir gagal — kalimat awam untuk ditampilkan; null bila sehat. */
+  error: string | null;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -60,6 +81,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
   const [messages, setMessages] = useState<ChatMessage[]>(USE_MOCK ? SEED_MESSAGES : []);
   const [logs, setLogs] = useState<StatusLog[]>(USE_MOCK ? SEED_LOGS : []);
+  const [loading, setLoading] = useState(!USE_MOCK);
+  const [error, setError] = useState<string | null>(null);
 
   // ─────────────────────────────────────────────
   // Fetch dari Supabase (role-aware)
@@ -72,30 +95,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const isAdmin = user.role === "admin";
 
     try {
-      // Reports
-      const repSource = isAdmin ? "v_reports_admin" : "reports";
-      const { data: reps, error: repErr } = await withTimeout(
-        supabase.from(repSource).select("*").order("created_at", { ascending: false }),
-        FETCH_TIMEOUT_MS,
-      );
-      if (repErr) throw new Error(`reports: ${repErr.message}`);
+      // Empat sumber tidak saling bergantung → satu putaran jaringan, bukan empat.
+      const [repRes, evRes, msgRes, logRes] = await Promise.all([
+        withTimeout(
+          isAdmin
+            ? supabase.from("v_reports_admin").select(KOLOM_LAPORAN_ADMIN).order("created_at", { ascending: false })
+            : supabase.from("reports").select(KOLOM_LAPORAN).order("created_at", { ascending: false }),
+          FETCH_TIMEOUT_MS,
+        ),
+        withTimeout(
+          supabase.from("report_evidence").select("report_id, file_name, file_path"),
+          FETCH_TIMEOUT_MS,
+        ),
+        withTimeout(
+          supabase.from("report_messages").select(KOLOM_PESAN).order("created_at", { ascending: true }),
+          FETCH_TIMEOUT_MS,
+        ),
+        withTimeout(
+          supabase.from("report_status_log").select(KOLOM_LOG).order("created_at", { ascending: true }),
+          FETCH_TIMEOUT_MS,
+        ),
+      ]);
+      if (repRes.error) throw new Error(`reports: ${repRes.error.message}`);
+      if (evRes.error) throw new Error(`evidence: ${evRes.error.message}`);
+      if (msgRes.error) throw new Error(`messages: ${msgRes.error.message}`);
+      if (logRes.error) throw new Error(`status_log: ${logRes.error.message}`);
 
       // Evidence (jumlah + nama + path untuk signed URL)
-      const { data: evs, error: evErr } = await withTimeout(
-        supabase.from("report_evidence").select("report_id, file_name, file_path"),
-        FETCH_TIMEOUT_MS,
-      );
-      if (evErr) throw new Error(`evidence: ${evErr.message}`);
       const evByReport = new Map<string, EvidenceFile[]>();
-      (evs ?? []).forEach((e: { report_id: string; file_name: string | null; file_path: string }) => {
+      ((evRes.data ?? []) as Array<{ report_id: string; file_name: string | null; file_path: string }>).forEach((e) => {
         const arr = evByReport.get(e.report_id) ?? [];
         arr.push({ name: e.file_name ?? "berkas", path: e.file_path });
         evByReport.set(e.report_id, arr);
       });
 
       setReports(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (reps ?? []).map((row: any) =>
+        ((repRes.data ?? []) as unknown as ReportRowAdmin[]).map((row) =>
           reportFromRow(row, {
             evidence: evByReport.get(row.id),
             evidenceCount: (evByReport.get(row.id) ?? []).length,
@@ -104,25 +139,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
         ),
       );
-
-      // Messages
-      const { data: msgs, error: msgErr } = await withTimeout(
-        supabase.from("report_messages").select("*").order("created_at", { ascending: true }),
-        FETCH_TIMEOUT_MS,
-      );
-      if (msgErr) throw new Error(`messages: ${msgErr.message}`);
-      setMessages((msgs ?? []).map(messageFromRow));
-
-      // Status log
-      const { data: lgs, error: logErr } = await withTimeout(
-        supabase.from("report_status_log").select("*").order("created_at", { ascending: true }),
-        FETCH_TIMEOUT_MS,
-      );
-      if (logErr) throw new Error(`status_log: ${logErr.message}`);
-      setLogs((lgs ?? []).map(statusLogFromRow));
+      setMessages(((msgRes.data ?? []) as unknown as MessageRow[]).map(messageFromRow));
+      setLogs(((logRes.data ?? []) as unknown as StatusLogRow[]).map(statusLogFromRow));
+      setError(null);
     } catch (e) {
-      // Jangan biarkan error/timeout menggantungkan UI; cukup catat.
+      // Jangan biarkan error/timeout menggantungkan UI: catat detailnya di
+      // konsol, tampilkan kalimat awam lewat `error` supaya halaman tidak
+      // menyamarkan kegagalan sebagai "belum ada laporan".
       console.error("Gagal memuat data dari Supabase:", e);
+      setError(PESAN_GAGAL_MUAT);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
@@ -283,7 +310,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <StoreContext.Provider
-      value={{ reports, messages, logs, addReport, addMessage, changeStatus, revealReporter, refresh }}
+      value={{
+        reports, messages, logs, addReport, addMessage, changeStatus, revealReporter, refresh,
+        loading, error,
+      }}
     >
       {children}
     </StoreContext.Provider>

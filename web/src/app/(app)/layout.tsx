@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock } from "@phosphor-icons/react";
+import { ArrowsClockwise, Clock, WarningCircle } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
+import { useStore } from "@/lib/store";
 import { ORG_NAME } from "@/lib/constants";
 import { useIdleTimeout } from "@/lib/useIdleTimeout";
 import { Sidebar } from "@/components/Sidebar";
@@ -12,6 +13,7 @@ import { MobileDrawer } from "@/components/MobileDrawer";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, ready, logout } = useAuth();
+  const { error: galatStore, refresh } = useStore();
   const router = useRouter();
   const [navOpen, setNavOpen] = useState(false);
   const { showWarning, countdown, resetIdle } = useIdleTimeout(logout);
@@ -47,6 +49,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main id="konten" tabIndex={-1} className="flex-1 focus:outline-none">
           {/* Tepi halaman 20 di HP, 40 mulai 1024. Lebar maksimum 1240 termasuk tepi. */}
           <div className="mx-auto w-full max-w-[1240px] px-5 pb-12 pt-6 lg:px-10 lg:pt-8">
+            {/* Pemuatan data gagal: satu spanduk untuk semua halaman, supaya
+                daftar kosong tidak disalahartikan sebagai "belum ada laporan". */}
+            {galatStore && (
+              <div
+                role="alert"
+                className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-kartu)] border border-garis bg-merah-latar px-4 py-3 text-bantu leading-[1.5] text-tinta"
+              >
+                <span className="flex items-start gap-2">
+                  <WarningCircle size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-merah" />
+                  {galatStore}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => refresh()}
+                  className="flex h-9 items-center gap-1.5 rounded-full border border-garis-kuat bg-kartu px-4 text-bantu font-semibold text-tinta transition-colors duration-150 hover:bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta"
+                >
+                  <ArrowsClockwise size={16} aria-hidden="true" />
+                  Coba lagi
+                </button>
+              </div>
+            )}
             {children}
           </div>
         </main>

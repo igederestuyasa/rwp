@@ -18,6 +18,7 @@ import { DataTable, type Kolom } from "@/components/hc/DataTable";
 import { ItemCard, ItemCardGrid } from "@/components/hc/ItemCard";
 import { DetailPanel } from "@/components/hc/DetailPanel";
 import { KosongHC } from "@/components/hc/KosongHC";
+import { MemuatHC } from "@/components/hc/MemuatHC";
 import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
 import { useDaftarDetail } from "@/components/hc/useDaftarDetail";
 import type { Report } from "@/lib/types";
@@ -66,7 +67,7 @@ export default function LaporanPage() {
 }
 
 function IsiLaporan() {
-  const { reports } = useStore();
+  const { reports, loading } = useStore();
   const router = useRouter();
 
   const [cari, setCari] = useState("");
@@ -251,7 +252,9 @@ function IsiLaporan() {
         </div>
 
         <div ref={daftarRef} className="mt-6">
-          {pageItems.length === 0 ? (
+          {pageItems.length === 0 && loading ? (
+            <MemuatHC teks="Memuat daftar laporan…" />
+          ) : pageItems.length === 0 ? (
             adaFilter ? (
               <KosongHC
                 judul="Tidak ada laporan yang cocok"

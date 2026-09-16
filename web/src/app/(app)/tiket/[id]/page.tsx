@@ -26,6 +26,7 @@ import { Field, Select, Textarea } from "@/components/ui/Field";
 import { Panel, MetaField, SlaBox } from "@/components/ui/Panel";
 import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
 import { KosongHC } from "@/components/hc/KosongHC";
+import { MemuatHC } from "@/components/hc/MemuatHC";
 import { ChatThread } from "@/components/ChatThread";
 import { Timeline } from "@/components/Timeline";
 
@@ -37,12 +38,15 @@ const KELAS_KEMBALI =
 export default function TiketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { reports, changeStatus } = useStore();
+  const { reports, changeStatus, loading } = useStore();
   const report = reports.find((r) => r.id === id);
 
   if (user?.role !== "admin") {
     return <div className="text-bantu text-redup">Halaman ini hanya untuk admin HC.</div>;
   }
+
+  // Data belum tiba: jangan tampilkan "tidak ditemukan" sebelum tahu.
+  if (!report && loading) return <MemuatHC teks="Memuat laporan…" />;
 
   if (!report) {
     return (

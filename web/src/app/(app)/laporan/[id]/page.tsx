@@ -9,6 +9,7 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import { Panel, MetaField, SlaBox } from "@/components/ui/Panel";
 import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
 import { KosongHC } from "@/components/hc/KosongHC";
+import { MemuatHC } from "@/components/hc/MemuatHC";
 import { Timeline } from "@/components/Timeline";
 import { ChatThread } from "@/components/ChatThread";
 
@@ -19,8 +20,11 @@ const KELAS_KEMBALI =
 
 export default function LaporanDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { reports } = useStore();
+  const { reports, loading } = useStore();
   const report = reports.find((r) => r.id === id);
+
+  // Data belum tiba: jangan tampilkan "tidak ditemukan" sebelum tahu.
+  if (!report && loading) return <MemuatHC teks="Memuat laporan…" />;
 
   if (!report) {
     return (
