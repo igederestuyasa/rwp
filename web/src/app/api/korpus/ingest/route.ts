@@ -17,8 +17,7 @@
 // ============================================================
 import { chunkToTexts } from "@/lib/chunker";
 import { embedBatch, embedModelName } from "@/lib/llmClient";
-import { KORPUS_BUCKET, jsonError, otorisasiAdmin, type DokumenKorpus } from "@/lib/korpusServer";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { ambilTeksSumber, jsonError, otorisasiAdmin, type DokumenKorpus } from "@/lib/korpusServer";
 
 export const runtime = "nodejs";
 // Beri ruang di paket yang mengizinkan; di Hobby tetap dibatasi platform.
@@ -30,29 +29,6 @@ const BATCH = 40;
 const EMBED_SUB = 20;
 
 type Baris = Pick<DokumenKorpus, "id" | "nama" | "jenis" | "source_doc" | "storage_path" | "policy_id">;
-
-/** Ambil teks sumber dokumen sesuai jenisnya. */
-async function ambilTeks(supabase: SupabaseClient, dok: Baris): Promise<string> {
-  if (dok.jenis === "kebijakan") {
-    if (!dok.policy_id) throw new Error("Dokumen kebijakan tidak menunjuk ke policy_id.");
-    const { data, error } = await supabase
-      .from("policies")
-      .select("title, markdown")
-      .eq("id", dok.policy_id)
-      .maybeSingle<{ title: string; markdown: string | null }>();
-    if (error) throw new Error(`Gagal membaca kebijakan: ${error.message}`);
-    if (!data?.markdown) throw new Error("Kebijakan tidak punya isi Markdown.");
-    // Sama seperti build-corpus.mjs dulu: judul jadi heading utama, supaya
-    // hasil chunk handbook tidak berubah dibanding jalur skrip lama.
-    return `# ${data.title}\n\n${data.markdown.trim()}\n`;
-  }
-  if (!dok.storage_path) {
-    throw new Error("Dokumen ini hasil skrip lama tanpa berkas sumber — tidak bisa diproses ulang, hanya bisa dihapus.");
-  }
-  const { data, error } = await supabase.storage.from(KORPUS_BUCKET).download(dok.storage_path);
-  if (error || !data) throw new Error(`Gagal membaca berkas sumber: ${error?.message ?? "kosong"}`);
-  return await data.text();
-}
 
 export async function POST(req: Request) {
   const ctx = await otorisasiAdmin(req);
@@ -85,7 +61,7 @@ export async function POST(req: Request) {
   };
 
   try {
-    const teks = await ambilTeks(supabase, dok);
+    const teks = await ambilTeksSumber(supabase, dok);
     const semua = chunkToTexts(teks);
     const total = semua.length;
     if (total === 0) return await gagal("Dokumen tidak menghasilkan potongan teks apa pun.");
@@ -110,6 +86,8 @@ export async function POST(req: Request) {
       const vektor = await embedBatch(sub);
       const rows = sub.map((chunk_text, j) => ({
         source_doc: dok.source_doc,
+        // Posisi di dokumen — dipakai pembaca isi untuk menampilkan urutan asli.
+        chunk_index: mulaiDari + i + j,
         chunk_text,
         // JSON string, sama dengan ingest.mjs, agar bentuk kolom konsisten.
         embedding: JSON.stringify(vektor[j]),

@@ -7,7 +7,9 @@ supabase/
 ├── config.toml                              konfigurasi CLI
 ├── migrations/                              perubahan SKEMA, dijalankan berurutan
 │   ├── 20260101000100_baseline_schema.sql   10 tabel, trigger, RLS, view admin, RPC
-│   └── 20260101000200_storage_buckets.sql   bucket rwp-evidence & policy-docs
+│   ├── 20260101000200_storage_buckets.sql   bucket rwp-evidence & policy-docs
+│   ├── 20260101000300_korpus_admin.sql      tabel corpus_documents + RLS tulis admin (korpus AI)
+│   └── 20260101000400_rag_chunk_index.sql   kolom chunk_index (urutan potongan)
 └── seeds/                                   ISI awal, bukan skema
     ├── 01_users_demo.sql                    profil 3 akun demo
     └── 02_policies.sql                      handbook RWP untuk halaman /kebijakan

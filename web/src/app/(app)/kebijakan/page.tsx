@@ -9,8 +9,6 @@
 //      membuka pembaca dokumen. Keduanya hidup berdampingan.
 
 import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, CircleNotch, Warning } from "@phosphor-icons/react";
 import { POLICIES, type PolicyDoc } from "@/lib/policies";
@@ -26,50 +24,7 @@ import { StatusLabel } from "@/components/hc/StatusLabel";
 import { KosongHC } from "@/components/hc/KosongHC";
 import { useDaftarDetail } from "@/components/hc/useDaftarDetail";
 import { PdfViewer } from "@/components/PdfViewer";
-
-// ─── Komponen custom untuk ReactMarkdown ────────────────────────────────────
-// Semua warna dari token (§Token warna). Tidak ada varian mode gelap di sini:
-// nilai token sudah berganti sendiri saat kelas .dark aktif di <html>.
-const mdComponents: Components = {
-  h2: ({ children }) => (
-    <h2 className="mt-8 mb-3 border-b border-garis pb-2 text-bagian leading-[1.25] font-bold tracking-[-0.02em] text-tinta first:mt-0">
-      {children}
-    </h2>
-  ),
-  h3: ({ children }) => (
-    <h3 className="mt-6 mb-2 text-subjudul leading-[1.3] font-bold tracking-[-0.02em] text-tinta">
-      {children}
-    </h3>
-  ),
-  h4: ({ children }) => (
-    <h4 className="mt-4 mb-1.5 text-isi leading-[1.4] font-semibold text-tinta">
-      {children}
-    </h4>
-  ),
-  p: ({ children }) => (
-    <p className="mb-3 text-isi leading-[1.6] text-tinta last:mb-0">{children}</p>
-  ),
-  ol: ({ children }) => (
-    <ol className="mb-3 ml-4 list-decimal space-y-1 text-isi leading-[1.6] text-tinta">
-      {children}
-    </ol>
-  ),
-  ul: ({ children }) => (
-    <ul className="mb-3 ml-4 list-disc space-y-1 text-isi leading-[1.6] text-tinta">
-      {children}
-    </ul>
-  ),
-  li: ({ children }) => <li className="pl-1 leading-[1.6]">{children}</li>,
-  blockquote: ({ children }) => (
-    <blockquote className="my-4 rounded-[var(--radius-input)] border border-garis bg-latar px-4 py-3 text-isi leading-[1.6] text-redup">
-      {children}
-    </blockquote>
-  ),
-  strong: ({ children }) => (
-    <strong className="font-semibold text-tinta">{children}</strong>
-  ),
-  hr: () => <hr className="my-6 border-garis" />,
-};
+import { MarkdownKebijakan } from "@/components/MarkdownKebijakan";
 
 // ─── Mapper baris DB → PolicyDoc ─────────────────────────────────────────────
 function rowToPolicy(row: Record<string, unknown>): PolicyDoc {
@@ -126,7 +81,7 @@ function PolicyDetail({ doc, onBack }: { doc: PolicyDoc; onBack: () => void }) {
             onContextMenu={(e) => e.preventDefault()}
           >
             {doc.markdown ? (
-              <ReactMarkdown components={mdComponents}>{doc.markdown}</ReactMarkdown>
+              <MarkdownKebijakan>{doc.markdown}</MarkdownKebijakan>
             ) : (
               <>
                 <div className="space-y-4 text-isi leading-[1.6] text-tinta">

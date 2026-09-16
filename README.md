@@ -93,8 +93,10 @@ Petunjuk lengkap beserta cara menambah perubahan skema berikutnya ada di
 |---|---|---|
 | 1 | `web/supabase/migrations/20260101000100_baseline_schema.sql` | Semua tabel, trigger, RLS, view admin, dan RPC |
 | 2 | `web/supabase/migrations/20260101000200_storage_buckets.sql` | Bucket `rwp-evidence` & `policy-docs` + batas ukuran/MIME |
-| 3 | `web/supabase/seeds/01_users_demo.sql` | Profil 3 akun demo |
-| 4 | `web/supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
+| 3 | `web/supabase/migrations/20260101000300_korpus_admin.sql` | Tabel `corpus_documents` + izin tulis admin untuk korpus AI |
+| 4 | `web/supabase/migrations/20260101000400_rag_chunk_index.sql` | Kolom `chunk_index` supaya isi korpus bisa dibaca urut |
+| 5 | `web/supabase/seeds/01_users_demo.sql` | Profil 3 akun demo |
+| 6 | `web/supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
 
 Dua yang pertama adalah **migrasi** (mengubah bentuk database, dijalankan di
 semua lingkungan). Dua terakhir adalah **seed** (isi demo — jangan dijalankan di
@@ -222,9 +224,11 @@ Ringkasnya, berurutan:
 
 1. `migrations/20260101000100_baseline_schema.sql`
 2. `migrations/20260101000200_storage_buckets.sql`
-3. Buat 3 akun Auth demo di *Authentication → Users* (centang **Auto Confirm User**)
-4. `seeds/01_users_demo.sql`
-5. `seeds/02_policies.sql`
+3. `migrations/20260101000300_korpus_admin.sql`
+4. `migrations/20260101000400_rag_chunk_index.sql`
+5. Buat 3 akun Auth demo di *Authentication → Users* (centang **Auto Confirm User**)
+6. `seeds/01_users_demo.sql`
+7. `seeds/02_policies.sql`
 
 Seed nomor 4 dan 5 hanya untuk pilot. **Jangan dijalankan** di lingkungan yang
 menampung laporan asli — akun demo bukan untuk produksi.

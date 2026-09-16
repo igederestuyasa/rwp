@@ -67,3 +67,34 @@ export type DokumenKorpus = {
   created_at: string;
   updated_at: string;
 };
+
+/** Kolom yang diperlukan untuk menemukan teks sumber sebuah dokumen. */
+export type SumberDokumen = Pick<DokumenKorpus, "jenis" | "storage_path" | "policy_id">;
+
+/**
+ * Ambil teks sumber dokumen sesuai jenisnya. Dipakai dua tempat — ingest
+ * (untuk dipecah) dan pembaca isi di /korpus (untuk ditampilkan) — supaya
+ * yang dilihat admin persis teks yang dipelajari asisten.
+ * Melempar Error bila sumbernya tidak ada (dokumen warisan skrip lama).
+ */
+export async function ambilTeksSumber(supabase: SupabaseClient, dok: SumberDokumen): Promise<string> {
+  if (dok.jenis === "kebijakan") {
+    if (!dok.policy_id) throw new Error("Dokumen kebijakan tidak menunjuk ke policy_id.");
+    const { data, error } = await supabase
+      .from("policies")
+      .select("title, markdown")
+      .eq("id", dok.policy_id)
+      .maybeSingle<{ title: string; markdown: string | null }>();
+    if (error) throw new Error(`Gagal membaca kebijakan: ${error.message}`);
+    if (!data?.markdown) throw new Error("Kebijakan tidak punya isi Markdown.");
+    // Sama seperti build-corpus.mjs dulu: judul jadi heading utama, supaya
+    // hasil chunk handbook tidak berubah dibanding jalur skrip lama.
+    return `# ${data.title}\n\n${data.markdown.trim()}\n`;
+  }
+  if (!dok.storage_path) {
+    throw new Error("Dokumen ini hasil skrip lama tanpa berkas sumber — tidak bisa diproses ulang, hanya bisa dihapus.");
+  }
+  const { data, error } = await supabase.storage.from(KORPUS_BUCKET).download(dok.storage_path);
+  if (error || !data) throw new Error(`Gagal membaca berkas sumber: ${error?.message ?? "kosong"}`);
+  return await data.text();
+}

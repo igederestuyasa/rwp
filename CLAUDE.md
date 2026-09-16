@@ -93,12 +93,15 @@ berurutan di setiap lingkungan:
 3. `20260101000300_korpus_admin.sql` — tabel `corpus_documents`, RLS tulis
    admin pada `rag_chunks`/`policies`/bucket `policy-docs`, backfill dokumen
    warisan skrip lama
+4. `20260101000400_rag_chunk_index.sql` — kolom `rag_chunks.chunk_index`
+   (urutan potongan; insert per batch membuat `created_at` seragam sehingga
+   urutan asli tidak bisa dipulihkan tanpa kolom ini)
 
 **Seed** (`web/supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
 yang menampung laporan asli:
 
-4. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
-5. `02_policies.sql` — isi halaman Kebijakan
+5. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
+6. `02_policies.sql` — isi halaman Kebijakan
 
 Seluruh migrasi idempotent dan mencatat versinya sendiri ke
 `supabase_migrations.schema_migrations`, tabel yang sama dipakai Supabase CLI.
@@ -145,6 +148,17 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   waktu serverless. Sumber kebenaran handbook adalah **baris tabel `policies`**
   yang juga dibaca `/kebijakan`, sehingga asisten dan halaman kebijakan tidak
   bercerita berbeda. `lib/policies.ts` kini hanya data mock dan seed.
+- **Admin bisa membaca isi korpus** dari halaman yang sama (klik baris atau
+  "Lihat isi", URL `?pilih=<id>&lihat=teks|potongan`). Tab *Teks asli*
+  menampilkan sumber lewat `components/MarkdownKebijakan.tsx` (renderer yang
+  sama dengan `/kebijakan`); tab *Potongan* menampilkan baris `rag_chunks`
+  persis seperti yang dibaca asisten, urut `chunk_index`. Route
+  `GET /api/korpus/[id]/isi` hanya menyentuh tabel korpus (§9.3).
+- Pembaruan search params di pola daftar-detail (`useDaftarDetail`, pembaca
+  korpus) memakai `window.history.replaceState`, bukan `router.replace`:
+  pada halaman statis yang dimuat langsung dengan `?pilih=` di URL,
+  `router.replace` terbukti diam saja, dan cara native ini didokumentasikan
+  Next sebagai jalur yang tersinkron dengan `useSearchParams`.
 - Skrip lama `scripts/ingest.mjs`, `manage-docs.mjs`, `build-corpus.mjs` masih
   ada sebagai cadangan selama transisi; `lib/chunker.ts` adalah port 1:1
   dengan paritas teruji, jadi hasilnya sama. Dokumen cara-pakai di

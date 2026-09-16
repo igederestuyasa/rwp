@@ -5,7 +5,10 @@
 // Aturan yang diwujudkan di sini:
 //   - kursor berhenti 120ms di atas item → item terpilih (hover intent);
 //   - fokus keyboard langsung memilih, tanpa tunda;
-//   - id terpilih disimpan di URL `?pilih=<id>` lewat router.replace;
+//   - id terpilih disimpan di URL `?pilih=<id>` lewat window.history.replaceState
+//     (API History native yang disinkronkan Next ke useSearchParams — bukan
+//     router.replace, yang memicu fetch RSC tiap hover dan terbukti diam saja
+//     bila halaman statis dimuat langsung dengan `?pilih=` di URL);
 //   - kalau item terpilih hilang dari daftar (mis. kena filter), yang dipilih
 //     adalah item pertama yang terlihat;
 //   - pilihan awal: dari URL kalau id-nya ada di daftar, kalau tidak item
@@ -18,7 +21,7 @@
 // berubah langsung menghasilkan pilihan yang benar tanpa render tambahan.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 /** Jeda hover intent (ms) sesuai spesifikasi. */
 const TUNDA_HOVER = 120;
@@ -51,7 +54,6 @@ export type OpsiDaftarDetail<T> = {
 export function useDaftarDetail<T>(opsi: OpsiDaftarDetail<T>): HasilDaftarDetail<T> {
   const { items, idDari, tersediaDari, paramUrl = "pilih" } = opsi;
 
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const idUrl = params.get(paramUrl);
@@ -106,11 +108,11 @@ export function useDaftarDetail<T>(opsi: OpsiDaftarDetail<T>): HasilDaftarDetail
       if (params.get(paramUrl) === id) return;
       const berikut = new URLSearchParams(params.toString());
       berikut.set(paramUrl, id);
-      router.replace(`${pathname}?${berikut.toString()}`, { scroll: false });
+      window.history.replaceState(null, "", `${pathname}?${berikut.toString()}`);
     },
     // setPilihanManual ikut didaftarkan karena React Compiler menyimpulkannya
     // sebagai dependensi; setter useState stabil, jadi tak menambah invalidasi.
-    [paramUrl, params, pathname, router, setPilihanManual],
+    [paramUrl, params, pathname, setPilihanManual],
   );
 
   const propsHover = useCallback(
