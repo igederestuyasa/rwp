@@ -23,7 +23,7 @@ export default function Home() {
   // Selagi auth dicek, atau saat user terdeteksi (sedang dialihkan), tahan render landing.
   if (!ready || user) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-latar text-bantu text-redup">
         Memuat…
       </div>
     );
