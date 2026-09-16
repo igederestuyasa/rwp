@@ -11,9 +11,7 @@
 *.sqlite3
 uploads/
 evidence/
-# Korpus RAG siap ingest — dibangun ulang dari sumber di repo (scripts/corpus/),
-# dan bisa berisi dokumen kebijakan asli.
-/scripts/docs/
+
 # Data karyawan & kredensial hasil skrip impor
 /scripts/users-import.csv
 /scripts/credentials-output.csv

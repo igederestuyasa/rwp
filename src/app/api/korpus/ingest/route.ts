@@ -1,6 +1,6 @@
 // ============================================================
 // POST /api/korpus/ingest — pecah dokumen jadi chunk, sematkan (embed),
-// simpan ke rag_chunks. Menggantikan scripts/ingest.mjs.
+// simpan ke rag_chunks. Menggantikan skrip terminal lama (ingest.mjs).
 // ------------------------------------------------------------
 // BERTAHAP & TANPA STATE DI SERVER. Fungsi serverless punya batas waktu
 // (Vercel Hobby ~10 detik), sementara embedding ratusan chunk bisa lebih
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
         // Posisi di dokumen — dipakai pembaca isi untuk menampilkan urutan asli.
         chunk_index: mulaiDari + i + j,
         chunk_text,
-        // JSON string, sama dengan ingest.mjs, agar bentuk kolom konsisten.
+        // JSON string ("[0.1,0.2,…]") — bentuk yang diterima PostgREST untuk kolom vector.
         embedding: JSON.stringify(vektor[j]),
         embed_model: embedModelName(),
       }));

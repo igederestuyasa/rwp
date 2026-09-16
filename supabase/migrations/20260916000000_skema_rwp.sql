@@ -1,15 +1,25 @@
 -- ============================================================
 -- RWP Hutama Karya — Skema database (Supabase / Postgres)
 -- ------------------------------------------------------------
--- Migrasi pertama. Lihat supabase/README.md untuk cara menjalankannya.
+-- SATU migrasi untuk seluruh skema. Ini gabungan dari enam migrasi
+-- terdahulu (baseline, storage, korpus admin, chunk_index, pengerasan
+-- RLS, indeks & policy) yang sudah dilebur ke keadaan akhirnya supaya
+-- pemasangan dari nol cukup satu berkas. Lihat supabase/README.md untuk
+-- cara menjalankannya dan untuk database yang sudah pernah memakai enam
+-- migrasi lama.
 --
--- Aplikasi ini hanya menangani satu jalur: pelaporan RWP. Tidak ada
--- konsep "layanan HC" atau grup fungsi di sini — pembeda hak akses admin
--- cuma satu, yaitu users.can_escalate (boleh membuka identitas pelapor).
+-- Idempotent: aman dijalankan ulang di database yang sudah terisi
+-- (`if not exists`, `drop policy if exists`, `create or replace`).
+-- Tidak ada perintah yang menghapus data.
+--
+-- Aplikasi ini hanya menangani satu jalur: pelaporan RWP. Pembeda hak
+-- akses admin cuma satu, yaitu users.can_escalate (boleh membuka
+-- identitas pelapor).
 --
 -- PRINSIP PRIVASI (CLAUDE.md §9.1):
 --  - reporter_id disimpan (anti-spam & tindak lanjut) tapi TIDAK pernah
---    ikut ke aplikasi admin. Admin membaca lewat view v_reports_admin.
+--    ikut ke aplikasi admin. Admin membaca lewat view v_reports_admin
+--    dan TIDAK punya policy select pada tabel reports.
 --  - Identitas pelapor hanya terbaca oleh admin ber-can_escalate, dan
 --    pembukaan identitas laporan anonim WAJIB lewat RPC reveal_reporter
 --    yang mencatat siapa/kapan/alasan di report_status_log.
@@ -20,8 +30,12 @@ create extension if not exists pgcrypto;
 
 
 -- ============================================================
--- users — profil aplikasi, 1:1 dengan auth.users
+-- 1. TABEL
 -- ============================================================
+
+-- users — profil aplikasi, 1:1 dengan auth.users.
+-- Profil dibuat lewat seed / SQL Editor / skrip service_role, BUKAN oleh
+-- aplikasi: tidak ada policy insert/update untuk pengguna (§9.2).
 create table if not exists public.users (
     id           uuid primary key references auth.users(id) on delete cascade,
     nik          text unique not null,
@@ -30,15 +44,13 @@ create table if not exists public.users (
     role         text not null default 'karyawan' check (role in ('karyawan', 'admin')),
     -- sub_role hanya untuk admin. 'rwp' = admin penanganan biasa,
     -- 'superior' = admin yang juga berwenang mengeskalasi identitas.
+    -- Wewenang sesungguhnya ada di can_escalate; sub_role hanya label.
     sub_role     text check (sub_role in ('superior', 'rwp')),
     can_escalate boolean not null default false,
     created_at   timestamptz not null default now()
 );
 
-
--- ============================================================
 -- reports — laporan RWP
--- ============================================================
 create sequence if not exists public.report_ticket_seq;
 
 create table if not exists public.reports (
@@ -99,10 +111,7 @@ create trigger trg_reports_updated_at
     before update on public.reports
     for each row execute function public.set_updated_at();
 
-
--- ============================================================
--- Lampiran, percakapan, dan audit trail
--- ============================================================
+-- Lampiran, percakapan, dan audit trail laporan
 create table if not exists public.report_evidence (
     id          uuid primary key default gen_random_uuid(),
     report_id   uuid not null references public.reports(id) on delete cascade,
@@ -134,12 +143,10 @@ create table if not exists public.report_status_log (
     attachments text[] not null default '{}',
     created_at  timestamptz not null default now()
 );
-create index if not exists idx_statuslog_report on public.report_status_log (report_id);
+create index if not exists idx_statuslog_report      on public.report_status_log (report_id);
+create index if not exists idx_status_log_changed_by on public.report_status_log (changed_by);
 
-
--- ============================================================
--- policies — konten halaman /kebijakan
--- ============================================================
+-- policies — konten halaman /kebijakan (dan sumber korpus asisten)
 create table if not exists public.policies (
     id            text primary key,
     title         text not null,
@@ -158,27 +165,76 @@ create table if not exists public.policies (
 );
 alter table public.policies add column if not exists pdf_path text;
 
-
--- ============================================================
 -- rag_chunks — korpus asisten (HANYA dokumen kebijakan, §9.3)
--- ============================================================
 create table if not exists public.rag_chunks (
     id          uuid primary key default gen_random_uuid(),
     source_doc  text not null,
     chunk_text  text not null,
     embedding   vector(1536),      -- text-embedding-3-small
     embed_model text default 'text-embedding-3-small',
-    created_at  timestamptz not null default now()
+    created_at  timestamptz not null default now(),
+    -- Posisi potongan (0, 1, 2, …) di dokumen asalnya. Potongan disisipkan
+    -- per batch sehingga created_at seragam; tanpa kolom ini urutan asli
+    -- tidak bisa dipulihkan saat admin membaca isi korpus di /korpus.
+    chunk_index integer
 );
+alter table public.rag_chunks add column if not exists chunk_index integer;
+
 create index if not exists idx_rag_embedding
     on public.rag_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+create index if not exists rag_chunks_source_doc_idx
+    on public.rag_chunks (source_doc);
+create index if not exists rag_chunks_source_doc_index_idx
+    on public.rag_chunks (source_doc, chunk_index);
 
+-- corpus_documents — daftar dokumen yang membentuk pengetahuan AI,
+-- dikelola admin dari halaman /korpus. source_doc adalah kunci yang
+-- dipakai rag_chunks.source_doc (untuk unggahan baru nilainya = id::text).
+create table if not exists public.corpus_documents (
+    id            uuid primary key default gen_random_uuid(),
+    nama          text not null,
+    jenis         text not null check (jenis in ('md', 'txt', 'pdf', 'kebijakan')),
+    source_doc    text not null unique,
+    -- Path di bucket policy-docs. NULL untuk jenis 'kebijakan' (sumbernya
+    -- tabel policies) dan untuk dokumen warisan tanpa berkas.
+    storage_path  text,
+    -- Terisi hanya untuk jenis 'kebijakan'.
+    policy_id     text references public.policies(id) on delete set null,
+    status        text not null default 'menunggu'
+                  check (status in ('menunggu', 'diproses', 'selesai', 'gagal')),
+    jumlah_chunk  integer not null default 0,
+    embed_model   text,
+    pesan_error   text,
+    dibuat_oleh   uuid references public.users(id) on delete set null,
+    created_at    timestamptz not null default now(),
+    updated_at    timestamptz not null default now()
+);
+create index if not exists idx_corpus_documents_policy      on public.corpus_documents (policy_id);
+create index if not exists idx_corpus_documents_dibuat_oleh on public.corpus_documents (dibuat_oleh);
 
--- ============================================================
--- chat_* — riwayat percakapan asisten + rating
+drop trigger if exists trg_corpus_documents_updated_at on public.corpus_documents;
+create trigger trg_corpus_documents_updated_at
+    before update on public.corpus_documents
+    for each row execute function public.set_updated_at();
+
+-- Chunk yang pernah masuk tanpa baris corpus_documents (jalur skrip lama)
+-- didaftarkan sebagai dokumen warisan supaya terlihat dan bisa dihapus dari
+-- /korpus. Di database baru ini tidak melakukan apa-apa.
+insert into public.corpus_documents (nama, jenis, source_doc, status, jumlah_chunk, embed_model)
+select
+    source_doc,
+    case when lower(source_doc) like '%.txt' then 'txt' else 'md' end,
+    source_doc,
+    'selesai',
+    count(*),
+    max(embed_model)
+from public.rag_chunks
+group by source_doc
+on conflict (source_doc) do nothing;
+
+-- chat_* — riwayat percakapan asisten + rating.
 -- Admin TIDAK boleh membaca isi chat per-orang (least privilege §9.2);
 -- rating hanya keluar sebagai agregat lewat get_chat_feedback_summary.
--- ============================================================
 create table if not exists public.chat_sessions (
     id         uuid primary key default gen_random_uuid(),
     user_id    uuid not null references auth.users(id) on delete cascade,
@@ -213,10 +269,12 @@ create table if not exists public.chat_feedback (
     created_at timestamptz not null default now()
 );
 create index if not exists idx_chat_feedback_created on public.chat_feedback (created_at);
+create index if not exists idx_chat_feedback_user    on public.chat_feedback (user_id);
+create index if not exists idx_chat_feedback_session on public.chat_feedback (session_id);
 
 
 -- ============================================================
--- Helper functions (SECURITY DEFINER — agar tidak rekursif ke RLS)
+-- 2. HELPER (SECURITY DEFINER — agar policy tidak rekursif ke RLS)
 -- ============================================================
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public as $$
@@ -228,12 +286,52 @@ returns boolean language sql stable security definer set search_path = public as
     select coalesce((select can_escalate from public.users where id = auth.uid()), false);
 $$;
 
+-- Pemilik laporan. Varian text dipakai policy storage (segmen path yang
+-- bukan UUID tidak boleh melempar galat cast); varian uuid dipakai policy
+-- tabel anak. Dipanggil dari policy supaya tidak memicu RLS `reports`
+-- berlapis untuk setiap baris.
+create or replace function public.pemilik_laporan(p_report_id text)
+returns boolean language sql stable security definer set search_path = public as $$
+    select exists (
+        select 1 from public.reports r
+        where r.id::text = p_report_id
+          and r.reporter_id = (select auth.uid())
+    );
+$$;
+revoke all on function public.pemilik_laporan(text) from public;
+grant execute on function public.pemilik_laporan(text) to authenticated;
+
+create or replace function public.pemilik_laporan(p_report_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+    select exists (
+        select 1 from public.reports r
+        where r.id = p_report_id
+          and r.reporter_id = (select auth.uid())
+    );
+$$;
+revoke all on function public.pemilik_laporan(uuid) from public;
+grant execute on function public.pemilik_laporan(uuid) to authenticated;
+
+create or replace function public.pemilik_sesi_chat(p_session_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+    select exists (
+        select 1 from public.chat_sessions s
+        where s.id = p_session_id
+          and s.user_id = (select auth.uid())
+    );
+$$;
+revoke all on function public.pemilik_sesi_chat(uuid) from public;
+grant execute on function public.pemilik_sesi_chat(uuid) to authenticated;
+
 
 -- ============================================================
--- RLS
+-- 3. RLS
 -- ------------------------------------------------------------
--- Tanpa grup layanan, aturannya jadi sederhana: pelapor melihat miliknya
--- sendiri, admin melihat semua laporan RWP.
+-- Pelapor melihat miliknya sendiri. Admin melihat semua laporan, tetapi
+-- HANYA lewat view v_reports_admin — tidak ada policy admin pada tabel
+-- reports (mencegah reporter_id bocor lewat REST, §9.1). Perubahan status
+-- hanya lewat RPC change_report_status. `(select auth.uid())` dipakai
+-- supaya dievaluasi sekali per query, bukan per baris.
 -- ============================================================
 alter table public.users             enable row level security;
 alter table public.reports           enable row level security;
@@ -242,139 +340,157 @@ alter table public.report_messages   enable row level security;
 alter table public.report_status_log enable row level security;
 alter table public.policies          enable row level security;
 alter table public.rag_chunks        enable row level security;
+alter table public.corpus_documents  enable row level security;
 alter table public.chat_sessions     enable row level security;
 alter table public.chat_messages     enable row level security;
 alter table public.chat_feedback     enable row level security;
 
--- users
+-- users — baris sendiri saja; tidak ada insert/update dari aplikasi
+drop policy if exists users_insert_self on public.users;
 drop policy if exists users_select on public.users;
 create policy users_select on public.users
-    for select to authenticated using (id = auth.uid() or public.is_admin());
+    for select to authenticated using (id = (select auth.uid()));
 
-drop policy if exists users_insert_self on public.users;
-create policy users_insert_self on public.users
-    for insert to authenticated with check (id = auth.uid());
-
--- reports
+-- reports — pelapor saja; admin lewat view, status lewat RPC
+drop policy if exists reports_update_admin on public.reports;
 drop policy if exists reports_select on public.reports;
 create policy reports_select on public.reports
-    for select to authenticated using (reporter_id = auth.uid() or public.is_admin());
+    for select to authenticated using (reporter_id = (select auth.uid()));
 
 drop policy if exists reports_insert on public.reports;
 create policy reports_insert on public.reports
-    for insert to authenticated with check (reporter_id = auth.uid());
-
-drop policy if exists reports_update_admin on public.reports;
-create policy reports_update_admin on public.reports
-    for update to authenticated using (public.is_admin());
+    for insert to authenticated with check (reporter_id = (select auth.uid()));
 
 -- report_evidence
 drop policy if exists evidence_select on public.report_evidence;
 create policy evidence_select on public.report_evidence
-    for select to authenticated using (
-        public.is_admin()
-        or exists (select 1 from public.reports r
-                    where r.id = report_id and r.reporter_id = auth.uid())
-    );
+    for select to authenticated
+    using (public.is_admin() or public.pemilik_laporan(report_id));
 
 drop policy if exists evidence_insert_own on public.report_evidence;
 create policy evidence_insert_own on public.report_evidence
-    for insert to authenticated with check (
-        exists (select 1 from public.reports r
-                 where r.id = report_id and r.reporter_id = auth.uid())
-    );
+    for insert to authenticated
+    with check (public.pemilik_laporan(report_id));
 
 -- report_messages
 drop policy if exists messages_select on public.report_messages;
 create policy messages_select on public.report_messages
-    for select to authenticated using (
-        public.is_admin()
-        or exists (select 1 from public.reports r
-                    where r.id = report_id and r.reporter_id = auth.uid())
-    );
+    for select to authenticated
+    using (public.is_admin() or public.pemilik_laporan(report_id));
 
 drop policy if exists messages_insert on public.report_messages;
 create policy messages_insert on public.report_messages
-    for insert to authenticated with check (
+    for insert to authenticated
+    with check (
         (public.is_admin() and sender_role = 'admin')
-        or (sender_role = 'karyawan'
-            and exists (select 1 from public.reports r
-                         where r.id = report_id and r.reporter_id = auth.uid()))
+        or (sender_role = 'karyawan' and public.pemilik_laporan(report_id))
     );
 
--- report_status_log
+-- report_status_log (tulis hanya lewat RPC)
 drop policy if exists statuslog_select on public.report_status_log;
 create policy statuslog_select on public.report_status_log
-    for select to authenticated using (
-        public.is_admin()
-        or exists (select 1 from public.reports r
-                    where r.id = report_id and r.reporter_id = auth.uid())
-    );
+    for select to authenticated
+    using (public.is_admin() or public.pemilik_laporan(report_id));
 
--- policies (baca saja; penulisan lewat service_role / SQL Editor)
+-- policies — karyawan membaca yang terbit; admin melihat draft dan menulis
 drop policy if exists policies_select_published on public.policies;
 create policy policies_select_published on public.policies
-    for select to authenticated using (is_published = true);
+    for select to authenticated
+    using (is_published = true or public.is_admin());
 
--- rag_chunks (baca saja; ingest lewat service_role)
+drop policy if exists policies_admin_insert on public.policies;
+create policy policies_admin_insert on public.policies
+    for insert to authenticated with check (public.is_admin());
+
+drop policy if exists policies_admin_update on public.policies;
+create policy policies_admin_update on public.policies
+    for update to authenticated
+    using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists policies_admin_delete on public.policies;
+create policy policies_admin_delete on public.policies
+    for delete to authenticated using (public.is_admin());
+
+-- rag_chunks — semua pengguna login membaca (dipakai RPC match_rag_chunks);
+-- admin menulis/menghapus dari halaman /korpus dengan tokennya sendiri.
+-- Ingest ulang = hapus chunk dokumen itu lalu sisipkan yang baru, jadi
+-- tidak perlu policy update.
 drop policy if exists rag_select_authenticated on public.rag_chunks;
 create policy rag_select_authenticated on public.rag_chunks
     for select to authenticated using (auth.role() = 'authenticated');
 
+drop policy if exists rag_admin_insert on public.rag_chunks;
+create policy rag_admin_insert on public.rag_chunks
+    for insert to authenticated with check (public.is_admin());
+
+drop policy if exists rag_admin_delete on public.rag_chunks;
+create policy rag_admin_delete on public.rag_chunks
+    for delete to authenticated using (public.is_admin());
+
+-- corpus_documents — hanya admin
+drop policy if exists corpus_docs_admin_all on public.corpus_documents;
+create policy corpus_docs_admin_all on public.corpus_documents
+    for all to authenticated
+    using (public.is_admin()) with check (public.is_admin());
+
 -- chat_* — pemilik saja. Admin sengaja TIDAK diberi akses baca.
 drop policy if exists chat_sessions_select_own on public.chat_sessions;
 create policy chat_sessions_select_own on public.chat_sessions
-    for select to authenticated using (user_id = auth.uid());
+    for select to authenticated using (user_id = (select auth.uid()));
+
 drop policy if exists chat_sessions_insert_own on public.chat_sessions;
 create policy chat_sessions_insert_own on public.chat_sessions
-    for insert to authenticated with check (user_id = auth.uid());
+    for insert to authenticated with check (user_id = (select auth.uid()));
+
+-- UPDATE wajib WITH CHECK: tanpa itu pemilik bisa memindahkan sesinya ke
+-- user_id orang lain.
 drop policy if exists chat_sessions_update_own on public.chat_sessions;
 create policy chat_sessions_update_own on public.chat_sessions
-    for update to authenticated using (user_id = auth.uid());
+    for update to authenticated
+    using (user_id = (select auth.uid()))
+    with check (user_id = (select auth.uid()));
+
 drop policy if exists chat_sessions_delete_own on public.chat_sessions;
 create policy chat_sessions_delete_own on public.chat_sessions
-    for delete to authenticated using (user_id = auth.uid());
+    for delete to authenticated using (user_id = (select auth.uid()));
 
 drop policy if exists chat_messages_select_own on public.chat_messages;
 create policy chat_messages_select_own on public.chat_messages
-    for select to authenticated using (
-        exists (select 1 from public.chat_sessions s
-                 where s.id = session_id and s.user_id = auth.uid())
-    );
+    for select to authenticated using (public.pemilik_sesi_chat(session_id));
+
 drop policy if exists chat_messages_insert_own on public.chat_messages;
 create policy chat_messages_insert_own on public.chat_messages
-    for insert to authenticated with check (
-        exists (select 1 from public.chat_sessions s
-                 where s.id = session_id and s.user_id = auth.uid())
-    );
+    for insert to authenticated with check (public.pemilik_sesi_chat(session_id));
+
 drop policy if exists chat_messages_delete_own on public.chat_messages;
 create policy chat_messages_delete_own on public.chat_messages
-    for delete to authenticated using (
-        exists (select 1 from public.chat_sessions s
-                 where s.id = session_id and s.user_id = auth.uid())
-    );
+    for delete to authenticated using (public.pemilik_sesi_chat(session_id));
 
 drop policy if exists chat_feedback_insert_own on public.chat_feedback;
 create policy chat_feedback_insert_own on public.chat_feedback
-    for insert to authenticated with check (user_id = auth.uid());
+    for insert to authenticated with check (user_id = (select auth.uid()));
+
 drop policy if exists chat_feedback_select_own on public.chat_feedback;
 create policy chat_feedback_select_own on public.chat_feedback
-    for select to authenticated using (user_id = auth.uid());
+    for select to authenticated using (user_id = (select auth.uid()));
 
 
 -- ============================================================
--- v_reports_admin — sumber data admin
+-- 4. v_reports_admin — satu-satunya jalan admin membaca laporan
 -- ------------------------------------------------------------
--- PENTING (perbaikan kebocoran privasi):
---   Versi lama hanya menyembunyikan identitas saat is_anonymous = true,
---   sehingga SETIAP admin memegang nama + NIK pelapor non-anonim di
---   payload REST — pembatasan di UI hanya kosmetik. Sekarang identitas
---   juga disembunyikan dari admin yang tidak berwenang eskalasi, dan
---   penegakannya ada di SQL, bukan di JSX.
---   reporter_id tetap TIDAK pernah ikut ke view ini.
+-- Berjalan dengan hak pemilik (security_invoker = false) supaya RLS
+-- `reports` yang hanya untuk pelapor tidak menghalangi; klausa WHERE
+-- public.is_admin() adalah penjaganya, dan security_barrier memastikan
+-- penyaring itu dievaluasi sebelum ekspresi lain.
+--
+-- reporter_id TIDAK pernah ikut ke view ini. reporter_name/reporter_nik
+-- disembunyikan bila laporan anonim ATAU pembacanya tidak ber-can_escalate.
+-- Penegakannya harus tetap di SQL, bukan di JSX: pernah terjadi
+-- pembatasannya hanya di UI sementara payload REST memuat identitas.
 -- ============================================================
-create or replace view public.v_reports_admin
-with (security_invoker = true) as
+drop view if exists public.v_reports_admin;
+create view public.v_reports_admin
+with (security_invoker = false, security_barrier = true) as
 select
     r.id, r.ticket_no, r.kategori, r.judul, r.kronologi,
     r.tanggal_kejadian, r.lokasi, r.terlapor, r.is_anonymous,
@@ -382,12 +498,18 @@ select
     case when r.is_anonymous or not public.can_escalate() then null else u.nama end as reporter_name,
     case when r.is_anonymous or not public.can_escalate() then null else u.nik  end as reporter_nik
 from public.reports r
-left join public.users u on u.id = r.reporter_id;
+left join public.users u on u.id = r.reporter_id
+where public.is_admin();
+
+revoke all on public.v_reports_admin from anon;
+grant select on public.v_reports_admin to authenticated;
 
 
 -- ============================================================
--- RPC: ubah status + catat audit
+-- 5. RPC
 -- ============================================================
+
+-- Ubah status + catat audit
 create or replace function public.change_report_status(
     p_report_id   uuid,
     p_to_status   text,
@@ -427,13 +549,9 @@ begin
 end;
 $$;
 
-
--- ============================================================
--- RPC: eskalasi identitas pelapor (hanya can_escalate = true)
--- ------------------------------------------------------------
+-- Eskalasi identitas pelapor (hanya can_escalate = true).
 -- Prefix '[ESKALASI IDENTITAS] ' dibaca komponen Timeline untuk merender
 -- baris audit berwarna amber. JANGAN ubah formatnya.
--- ============================================================
 create or replace function public.reveal_reporter(
     p_report_id uuid,
     p_reason    text
@@ -463,10 +581,8 @@ begin
 end;
 $$;
 
-
--- ============================================================
--- RPC: retrieval korpus asisten
--- ============================================================
+-- Retrieval korpus asisten. Kolom keluaran eksplisit, jadi penambahan
+-- kolom pada rag_chunks tidak mengubah kontraknya.
 create or replace function public.match_rag_chunks(
     query_embedding vector(1536),
     match_count     int default 4
@@ -480,10 +596,7 @@ language sql stable as $$
     limit match_count;
 $$;
 
-
--- ============================================================
--- RPC: rating asisten — AGREGAT saja, tidak pernah baris individual
--- ============================================================
+-- Rating asisten — AGREGAT saja, tidak pernah baris individual
 create or replace function public.get_chat_feedback_summary(p_start date, p_end date)
 returns table (log_date date, stars int, count bigint)
 language plpgsql security definer set search_path = public as $$
@@ -503,24 +616,88 @@ begin
 end;
 $$;
 
--- Selesai. Lanjut ke 02_storage.sql.
-
 
 -- ============================================================
--- Catat versi migrasi ini.
+-- 6. STORAGE
 -- ------------------------------------------------------------
--- Tabel ini milik Supabase CLI. Dengan menuliskannya sendiri, migrasi yang
--- dijalankan manual lewat SQL Editor tetap terbaca oleh `supabase db push`
--- nanti, sehingga tidak dijalankan dua kali.
+--   rwp-evidence : bukti pelaporan & lampiran percakapan. Path berkas
+--                  <report_id>/<uuid>.<ext> (lib/storage.ts), jadi segmen
+--                  folder pertama adalah id laporan.
+--   policy-docs  : PDF kebijakan + berkas korpus (.md/.txt) yang diunggah
+--                  admin dari /korpus.
+-- Batas ukuran & tipe di level bucket adalah lapis kedua setelah validasi
+-- klien/route (§9.4) — validasi klien bisa dilewati lewat API langsung.
 -- ============================================================
-create schema if not exists supabase_migrations;
+insert into storage.buckets (id, name, public)
+values ('rwp-evidence', 'rwp-evidence', false),
+       ('policy-docs',  'policy-docs',  false)
+on conflict (id) do nothing;
 
-create table if not exists supabase_migrations.schema_migrations (
-    version    text primary key,
-    statements text[],
-    name       text
+update storage.buckets
+set file_size_limit = 10485760,          -- 10 MB
+    allowed_mime_types = array[
+        'image/jpeg', 'image/png', 'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/aac',
+        'audio/wav', 'audio/x-wav', 'audio/ogg', 'application/ogg'
+    ]
+where id = 'rwp-evidence';
+
+update storage.buckets
+set file_size_limit = 10485760,          -- 10 MB
+    allowed_mime_types = array[
+        'application/pdf',
+        'text/markdown', 'text/x-markdown', 'text/plain'
+    ]
+where id = 'policy-docs';
+
+-- rwp-evidence — pemilik laporan atau admin. Admin mengunggah lampiran
+-- perubahan status dan balasan percakapan; pelapor mengunggah bukti miliknya.
+drop policy if exists "rwp_evidence_upload" on storage.objects;
+create policy "rwp_evidence_upload"
+on storage.objects for insert to authenticated
+with check (
+    bucket_id = 'rwp-evidence'
+    and (public.is_admin() or public.pemilik_laporan((storage.foldername(name))[1]))
 );
 
-insert into supabase_migrations.schema_migrations (version, name)
-values ('20260101000100', 'baseline_schema')
-on conflict (version) do nothing;
+drop policy if exists "rwp_evidence_read" on storage.objects;
+create policy "rwp_evidence_read"
+on storage.objects for select to authenticated
+using (
+    bucket_id = 'rwp-evidence'
+    and (public.is_admin() or public.pemilik_laporan((storage.foldername(name))[1]))
+);
+
+-- policy-docs — semua pengguna login membaca; admin menulis
+drop policy if exists "policy_docs_read" on storage.objects;
+create policy "policy_docs_read"
+on storage.objects for select to authenticated
+using (bucket_id = 'policy-docs');
+
+drop policy if exists "policy_docs_admin_insert" on storage.objects;
+create policy "policy_docs_admin_insert"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'policy-docs' and public.is_admin());
+
+drop policy if exists "policy_docs_admin_update" on storage.objects;
+create policy "policy_docs_admin_update"
+on storage.objects for update to authenticated
+using (bucket_id = 'policy-docs' and public.is_admin())
+with check (bucket_id = 'policy-docs' and public.is_admin());
+
+drop policy if exists "policy_docs_admin_delete" on storage.objects;
+create policy "policy_docs_admin_delete"
+on storage.objects for delete to authenticated
+using (bucket_id = 'policy-docs' and public.is_admin());
+
+-- Selesai. Lanjut ke seeds/ (opsional, hanya untuk demo/pilot).
+--
+-- Versi migrasi ini TIDAK dicatat dari dalam berkas: `supabase db push`
+-- mencatatnya sendiri ke supabase_migrations.schema_migrations, dan
+-- pencatatan ganda akan membuat push gagal. Kalau berkas ini dijalankan
+-- lewat SQL Editor, lihat supabase/README.md untuk cara mencatatnya agar
+-- CLI tidak mengulang.

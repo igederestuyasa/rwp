@@ -1,7 +1,7 @@
 # CI — jaga kualitas kode di tiap push/PR.
-# Gate wajib: type check (tsc) + ESLint (0 error) + production build.
-# Catatan: ESLint masih melaporkan beberapa WARNING (img, exhaustive-deps) yang
-# tidak menggagalkan build (eslint exit 0 selama tak ada error).
+# Gate wajib: type check (tsc) + ESLint + production build.
+# Baseline lint saat ini 0 error dan 0 warning (CLAUDE.md §5) — jangan menambah
+# keduanya. Build berjalan mode mock karena CI tidak memegang secret.
 name: CI
 
 on:

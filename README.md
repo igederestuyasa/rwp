@@ -13,8 +13,8 @@ mengakses layanan psikologi perusahaan.
 
 | Untuk | Fitur |
 |---|---|
-| Karyawan | Baca handbook RWP · Lapor insiden (bisa anonim, boleh lampirkan bukti) · Lacak status & chat dengan admin · Tanya asisten AI · 6 kanal Layanan Psikologi |
-| Admin RWP | Dashboard (status, tren, kategori insiden, proporsi anonim) · Daftar laporan · Ubah status 2 tahap + lampiran · Balas pelapor |
+| Karyawan | Baca handbook RWP · Lapor insiden (bisa anonim, boleh lampirkan bukti) · Lacak status & chat dengan admin · Tanya asisten AI (Sahabat RWP) · 6 kanal Layanan Psikologi |
+| Admin RWP | Dashboard (status, tren, kategori insiden, proporsi anonim) · Daftar laporan · Ubah status 2 tahap + lampiran · Balas pelapor · Kelola korpus asisten di `/korpus` |
 | Admin Superior | Semua di atas + eskalasi identitas pelapor anonim (teraudit) + unduh laporan periodik PDF/Excel |
 
 **Prinsip yang tidak dikompromikan** (detail di `CLAUDE.md` §9):
@@ -28,34 +28,37 @@ dan magic byte · rahasia tidak pernah masuk git.
 
 Next.js 16 (App Router) · TypeScript · Tailwind v4 · Supabase (Postgres + Auth +
 Storage + pgvector) · OpenAI (`gpt-4.1-mini` + `text-embedding-3-small`) ·
-Recharts · lucide-react.
+Recharts · Phosphor Icons · zod.
 
 Aplikasi berjalan **dua mode** lewat flag `NEXT_PUBLIC_USE_MOCK`:
 
 - `true` → data mock di memori. Tidak butuh backend maupun internet. Ini mode demo.
-- `false` → Supabase live (auth, laporan, chat, berkas, eskalasi semuanya nyata).
+- selain `true` (termasuk kosong) → Supabase live (auth, laporan, chat, berkas,
+  eskalasi semuanya nyata).
 
 ---
 
 ## Struktur folder
 
 ```
-(root repo = aplikasi Next.js; tidak ada folder web/ lagi)
-src/app/               ← route (App Router)
-src/components/        ← komponen UI (ui/ primitif, hc/ sistem HC Panel)
-src/lib/               ← data layer, konstanta, tipe, auth, store
-supabase/              ← database
-  migrations/          ← perubahan skema, berurutan
-  seeds/               ← isi demo (jangan dipakai di lingkungan produksi)
-scripts/               ← ingest RAG & skrip uji
-  corpus/              ← sumber dokumen korpus RAG (ikut di-commit)
-  docs/                ← korpus siap ingest (gitignored, dibangun skrip)
-vercel.json            ← menegaskan framework Next.js ke Vercel
+src/app/                 ← route (App Router); (app)/ = halaman setelah masuk, api/ = Route Handler
+src/components/          ← komponen UI (ui/ primitif, hc/ sistem HC Panel)
+src/lib/                 ← data layer, konstanta, tipe, auth, store, chunker korpus
+supabase/                ← database (petunjuk lengkap: supabase/README.md)
+  migrations/            ← SATU berkas: seluruh skema
+  seeds/                 ← isi demo (jangan dipakai di lingkungan produksi)
+scripts/                 ← skrip uji koneksi/login/eskalasi, kalibrasi RAG, impor akun
+  corpus/                ← dokumen cara-pakai untuk korpus asisten (diunggah lewat /korpus)
 docs/DESIGN.md           ← sistem UI "HC Panel" (acuan semua perubahan tampilan)
 docs/embedding.md        ← praktik retrieval RAG & kalibrasi MIN_SIMILARITY
-file-file-embedding/     ← dokumen sumber mentah (handbook RWP asli)
-deck-pitch.md            ← bahan presentasi
+docs/handbook-rwp-asli.md← handbook RWP mentah (sumber seed policies)
+docs/deck-pitch.md       ← bahan presentasi
+jalankan.bat             ← Windows: npm run dev
+jalankan-prod.bat        ← Windows: npm run build && npm run start
 ```
+
+Dokumen panduan untuk agen AI: `CLAUDE.md` (arsitektur, aturan keamanan, utang
+teknis) dan `AGENTS.md`.
 
 ---
 
@@ -71,6 +74,8 @@ Node.js 20+ (disarankan 24 LTS), akun Supabase, dan API key OpenAI.
 npm ci
 ```
 
+`postinstall` menyalin worker PDF.js ke `public/` — normal, bukan error.
+
 ### 3. Jalan cepat tanpa backend (mode demo)
 
 ```bash
@@ -83,28 +88,21 @@ Cukup untuk melihat seluruh alur tanpa menyiapkan apa pun.
 
 ### 4. Menyalakan Supabase
 
-Buat project Supabase baru, lalu jalankan SQL di `supabase/` secara
-**berurutan** — lewat `supabase db push` atau tempel manual di **SQL Editor**.
-Petunjuk lengkap beserta cara menambah perubahan skema berikutnya ada di
-[`supabase/README.md`](supabase/README.md).
+Buat project Supabase baru, lalu jalankan SQL di `supabase/` **berurutan**.
+Detail dua cara (SQL Editor atau Supabase CLI) dan cara menangani database
+yang sudah ada: [`supabase/README.md`](supabase/README.md).
 
 | Urutan | Berkas | Isi |
 |---|---|---|
-| 1 | `supabase/migrations/20260101000100_baseline_schema.sql` | Semua tabel, trigger, RLS, view admin, dan RPC |
-| 2 | `supabase/migrations/20260101000200_storage_buckets.sql` | Bucket `rwp-evidence` & `policy-docs` + batas ukuran/MIME |
-| 3 | `supabase/migrations/20260101000300_korpus_admin.sql` | Tabel `corpus_documents` + izin tulis admin untuk korpus AI |
-| 4 | `supabase/migrations/20260101000400_rag_chunk_index.sql` | Kolom `chunk_index` supaya isi korpus bisa dibaca urut |
-| 5 | `supabase/migrations/20260101000500_pengerasan_rls.sql` | Hasil audit: tutup celah RLS `users`/`reports`/bucket bukti |
-| 6 | `supabase/migrations/20260101000600_indeks_dan_policy.sql` | Indeks yang hilang + policy tabel anak lewat helper definer |
-| 7 | `supabase/seeds/01_users_demo.sql` | Profil 3 akun demo |
-| 8 | `supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
+| 1 | `supabase/migrations/20260916000000_skema_rwp.sql` | Seluruh skema: tabel, RLS, view admin, RPC, bucket storage |
+| 2 | *(Dashboard)* buat 3 akun Auth demo | *Authentication → Users*, centang **Auto Confirm User** |
+| 3 | `supabase/seeds/01_users_demo.sql` | Profil 3 akun demo (menautkan ke akun Auth di langkah 2) |
+| 4 | `supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
 
-Dua yang pertama adalah **migrasi** (mengubah bentuk database, dijalankan di
-semua lingkungan). Dua terakhir adalah **seed** (isi demo — jangan dijalankan di
-lingkungan yang menampung laporan asli).
+Nomor 1 adalah **migrasi** (dijalankan di semua lingkungan). Nomor 3–4 adalah
+**seed** (isi demo — jangan dijalankan di lingkungan yang menampung laporan asli).
 
-**Sebelum menjalankan nomor 3**, buat dulu akun Auth-nya di
-*Dashboard → Authentication → Users* (centang **Auto Confirm User**):
+Akun demo untuk langkah 2:
 
 | Email | Peran | Sandi demo |
 |---|---|---|
@@ -117,7 +115,7 @@ Lalu isi `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co     # tanpa /rest/v1/
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...      # server-only, dipakai skrip ingest
+SUPABASE_SERVICE_ROLE_KEY=...      # server-only; dipakai /api/policy-pdf dan skrip di scripts/
 OPENAI_API_KEY=...
 NEXT_PUBLIC_USE_MOCK=false
 ```
@@ -142,7 +140,8 @@ Pengetahuan asisten dikelola dari **halaman admin `/korpus`** — tanpa terminal
 4. Hapus atau proses ulang dokumen kapan saja dari panel detailnya.
 
 Semua itu berjalan sebagai admin yang login lewat RLS, bukan `service_role`, jadi
-route API-nya tidak bisa dipakai karyawan meski dipanggil langsung.
+route API-nya tidak bisa dipakai karyawan meski dipanggil langsung. PDF belum
+bisa diunggah ke korpus — konversi dulu ke `.md`.
 
 **Setelah korpus berubah**, jalankan sekali dari terminal:
 
@@ -156,19 +155,25 @@ dikalibrasi untuk korpus lama dan hampir pasti perlu digeser. Jangan pakai angka
 "0.70–0.80" yang beredar umum — di setup ini terbukti salah. Latar metodenya di
 `docs/embedding.md`.
 
-Skrip lama `build-corpus.mjs` dan `ingest.mjs --clear` masih ada sebagai cadangan
-dan menghasilkan chunk yang identik dengan jalur UI. PDF belum bisa diunggah ke
-korpus — konversi dulu ke `.md`.
+### 6. Akun tambahan (opsional)
+
+- `node scripts/add-demo-users.mjs` — 40 akun karyawan demo (daftar di
+  `scripts/demo-accounts.md`). Hapus sebelum go-live.
+- `node scripts/import-users-csv.mjs` — impor karyawan dari CSV; sandi
+  dibangkitkan per akun ke `scripts/credentials-output.csv` (gitignored —
+  hapus setelah didistribusikan).
+
+Keduanya memakai `SUPABASE_SERVICE_ROLE_KEY`.
 
 ---
 
 ## Perintah harian
 
 ```bash
-npm run dev              # server pengembangan
+npm run dev              # server pengembangan (Windows: jalankan.bat)
 npx tsc --noEmit         # type check
-npx eslint src           # lint
-npm run build            # build produksi
+npx eslint src           # lint — baseline 0 error, 0 warning; CI menggagalkan build bila bertambah
+npm run build            # build produksi (Windows: jalankan-prod.bat = build + start)
 ```
 
 ---
@@ -185,9 +190,9 @@ Aplikasi Next.js ada langsung di root repo (`package.json`, `next.config.ts`,
 mendeteksi **Next.js** sendiri. Build command, output directory, dan install
 command biarkan default.
 
-Kalau project Vercel lo dibuat saat aplikasi masih di folder `web/`, buka
-*Project Settings → General → Root Directory* dan **kosongkan** nilainya, lalu
-deploy ulang.
+Kalau project Vercel dibuat saat aplikasi masih di folder `web/` (versi lama
+repo), buka *Project Settings → General → Root Directory* dan **kosongkan**
+nilainya, lalu deploy ulang.
 
 ### 2. Isi environment variables
 
@@ -217,21 +222,9 @@ kosong. Kalau build gagal dengan pesan itu, variabelnya memang belum terpasang.
 
 ### 3. Jalankan migrasi di Supabase
 
-Lihat [`supabase/README.md`](supabase/README.md) untuk langkah lengkapnya.
-Ringkasnya, berurutan:
-
-1. `migrations/20260101000100_baseline_schema.sql`
-2. `migrations/20260101000200_storage_buckets.sql`
-3. `migrations/20260101000300_korpus_admin.sql`
-4. `migrations/20260101000400_rag_chunk_index.sql`
-5. `migrations/20260101000500_pengerasan_rls.sql`
-6. `migrations/20260101000600_indeks_dan_policy.sql`
-7. Buat 3 akun Auth demo di *Authentication → Users* (centang **Auto Confirm User**)
-8. `seeds/01_users_demo.sql`
-9. `seeds/02_policies.sql`
-
-Seed nomor 4 dan 5 hanya untuk pilot. **Jangan dijalankan** di lingkungan yang
-menampung laporan asli — akun demo bukan untuk produksi.
+Ikuti tabel di [Menyalakan Supabase](#4-menyalakan-supabase): satu migrasi,
+buat akun Auth demo, lalu dua seed. Seed hanya untuk pilot — **jangan
+dijalankan** di lingkungan yang menampung laporan asli.
 
 ### 4. Whitelist URL pengalihan
 
@@ -254,7 +247,7 @@ Tanpa ini, tautan reset kata sandi dari email berakhir 404.
 | Unggah bukti | Buat laporan dengan lampiran di `/lapor` | Berkas terunggah, bisa diunduh lagi |
 | Asisten | Tanya sesuatu di `/asisten` | Menjawab; kalau korpus kosong, menjawab jujur tidak ditemukan |
 
-Asisten baru berguna setelah korpusnya di-ingest — lihat bagian
+Asisten baru berguna setelah korpusnya diisi — lihat bagian
 [Menyalakan asisten (RAG)](#5-menyalakan-asisten-rag).
 
 ---
@@ -264,11 +257,12 @@ Asisten baru berguna setelah korpusnya di-ingest — lihat bagian
 - **Brave Shields memblokir `supabase.co`** → request menggantung. Pakai Chrome, atau matikan Shields untuk localhost.
 - **Lupa `npm ci`** → `tsc` melaporkan "Cannot find module 'clsx'" yang menyesatkan.
 - **`.next` basi setelah menghapus route** → `tsc` mengeluh soal berkas yang sudah tidak ada. Hapus `.next`.
-- **Ganti `OPENAI_EMBED_MODEL`** → wajib ingest ulang semua dokumen. Dimensi vektor di skema = 1536.
+- **Ganti `OPENAI_EMBED_MODEL`** → wajib proses ulang semua dokumen dari `/korpus`. Dimensi vektor di skema = 1536.
 - **Reset kata sandi lewat email** → free tier Supabase dibatasi 2 email/jam, dan URL pengalihan harus di-whitelist di Dashboard.
 - **Vercel mendeteksi framework "Other"** → Root Directory masih menunjuk folder yang tidak ada (`web`). Kosongkan Root Directory di *Project Settings → General*; aplikasi kini di root repo.
 - **Build gagal: `NEXT_PUBLIC_SUPABASE_URL kosong padahal NEXT_PUBLIC_USE_MOCK bukan "true"`** → environment variables belum dipasang untuk lingkungan yang di-build (Production/Preview). Ini penjaga yang disengaja, bukan bug. Isi variabelnya, deploy ulang.
 - **Deploy jalan tapi semua data gagal dimuat** → `NEXT_PUBLIC_SUPABASE_URL` belum ada saat build, jadi host Supabase tidak masuk `connect-src` di CSP. Isi variabelnya lalu deploy ulang.
+- **`supabase db push` menolak karena riwayat migrasi tidak cocok** → database dibuat dengan enam migrasi lama. Samakan riwayatnya dengan `supabase migration repair` (lihat `supabase/README.md`); skemanya sendiri sudah sama.
 
 ---
 
@@ -276,8 +270,8 @@ Asisten baru berguna setelah korpusnya di-ingest — lihat bagian
 
 - [ ] Validasi kategori insiden & alur status dengan kebijakan RWP resmi.
 - [ ] Tinjauan hukum/compliance untuk penyimpanan PII dan data sensitif.
-- [ ] Ganti akun demo dengan SSO atau akun resmi; hapus data demo (`src/lib/demoReports.ts`, `DEMO_USERS` di `mock.ts`).
+- [ ] Ganti akun demo dengan SSO atau akun resmi; hapus data demo (`src/lib/demoReports.ts`, `DEMO_USERS` di `mock.ts`, akun dari `scripts/add-demo-users.mjs`).
 - [ ] Naikkan Supabase ke tier berbayar: backup, audit log, retensi data.
 - [ ] Enkripsi at-rest untuk `reporter_id`.
 - [ ] Rate limiting pada halaman masuk.
-- [ ] Isi korpus asisten dengan dokumen kebijakan final.
+- [ ] Isi korpus asisten dengan dokumen kebijakan final, lalu kalibrasi ulang `MIN_SIMILARITY`.

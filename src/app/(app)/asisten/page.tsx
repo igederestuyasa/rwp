@@ -35,11 +35,13 @@ const MOCK_ACTIONS: ActionItem[] = [
 const MIN_QA_FOR_RATING = 3;
 const IDLE_MS = 45_000; // 45 detik idle setelah jawaban → tawarkan rating
 
+// Contoh pertanyaan pembuka. Harus soal RWP / aplikasi ini / Layanan
+// Psikologi — di luar itu asisten memang menolak (lihat api/asisten).
 const SUGGESTIONS = [
-  "Bagaimana cara mengajukan cuti?",
-  "Kapan slip gaji terbit?",
-  "Bagaimana mendaftar pelatihan?",
   "Apa itu kebijakan RWP?",
+  "Apa saja kategori pelanggaran RWP?",
+  "Apakah kritik keras dari atasan termasuk perundungan?",
+  "Bagaimana cara melapor secara anonim?",
 ];
 
 // Jalur lain untuk karyawan — set tetap, jadi memakai ikon semantik yang
