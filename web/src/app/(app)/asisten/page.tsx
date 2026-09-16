@@ -1,18 +1,26 @@
 "use client";
 
-import { useState, useRef, useEffect, type FormEvent } from "react";
+// Sahabat RWP — tanya-jawab kebijakan berbasis RAG.
+// Tampilan mengikuti sistem UI "HC Panel" (docs/DESIGN.md): token warna,
+// ikon Phosphor, permukaan datar tanpa bayangan. Ini pekerjaan tampilan —
+// alur data (lib/chat), pembuatan sesi lazy, aturan kemunculan rating, dan
+// payload POST /api/asisten TIDAK berubah.
+
+import { Suspense, useState, useRef, useEffect, type FormEvent, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {
-  Bot, Send, Sparkles, FileText, HeartHandshake, ShieldAlert, Trash2,
-  Plus, MessageSquare, Star, X, History, Loader2,
-} from "lucide-react";
+  Robot, PaperPlaneRight, Sparkle, FileText, ShieldWarning, Trash,
+  Plus, ChatCircle, Star, X, ClockCounterClockwise, CircleNotch,
+} from "@phosphor-icons/react";
 import { MOCK_QA_ANSWER, MOCK_QA_SOURCES } from "@/lib/mock";
 import { ASSISTANT_NAME } from "@/lib/constants";
 import { USE_MOCK, getSupabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Field";
+import { ItemCard, ItemCardGrid } from "@/components/hc/ItemCard";
 import {
   type ActionItem, type ChatMsg, type ChatSession,
   listSessions, loadMessages, createSession, appendMessages, deleteSession,
@@ -35,7 +43,31 @@ const SUGGESTIONS = [
   "Apa itu kebijakan RWP?",
 ];
 
+// Jalur lain untuk karyawan — nama item sekaligus penentu ikon generatif,
+// sengaja sama dengan beranda supaya ikonnya konsisten di seluruh app.
+const JALUR_LAIN = [
+  {
+    nama: "Layanan psikologi",
+    href: "/psikologi",
+    deskripsi: "Konseling profesional dan careline 24 jam, tanpa perlu membuat laporan lebih dulu.",
+  },
+  {
+    nama: "Lapor insiden",
+    href: "/lapor",
+    deskripsi: "Laporkan pelanggaran RWP lewat jalur rahasia. Bisa anonim, kerahasiaannya dijaga.",
+  },
+] as const;
+
 export default function AsistenPage() {
+  // Auto-ask dari beranda membaca ?q= lewat useSearchParams → butuh batas Suspense.
+  return (
+    <Suspense fallback={<p className="text-isi text-redup">Memuat {ASSISTANT_NAME}…</p>}>
+      <IsiAsisten />
+    </Suspense>
+  );
+}
+
+function IsiAsisten() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, ready } = useAuth();
@@ -247,259 +279,346 @@ export default function AsistenPage() {
   const qaCount = messages.filter((m) => m.role === "user").length;
 
   return (
-    <div className="lg:grid lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-5 lg:items-start">
-      {/* ── Sidebar riwayat ── */}
-      <aside className="mb-4 lg:mb-0 lg:sticky lg:top-4">
-        <button
-          onClick={newChat}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+    <div>
+      {/* ── Pembuka layar: h1 + subjudul (§Spasi — maksimal 4 elemen teks) ── */}
+      <header>
+        <h1
+          className="pembuka-masuk text-balance text-halaman leading-[1.05] font-bold tracking-[-0.04em] text-tinta"
+          style={{ animationDelay: "0ms" }}
         >
-          <Plus className="h-4 w-4" /> Chat baru
-        </button>
-
-        {/* Toggle riwayat di mobile */}
-        <button
-          onClick={() => setMobileHistoryOpen((o) => !o)}
-          className="mt-2 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 lg:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          {ASSISTANT_NAME}
+        </h1>
+        <p
+          className="pembuka-masuk mt-4 max-w-[44ch] text-subjudul leading-[1.5] text-redup"
+          style={{ animationDelay: "60ms" }}
         >
-          <span className="flex items-center gap-2"><History className="h-4 w-4" /> Riwayat percakapan</span>
-          {sessions.length > 0 && <span className="text-xs text-slate-400">{sessions.length}</span>}
-        </button>
+          Tanya apa saja soal kebijakan RWP. Jawabannya disusun dari dokumen resmi
+          perusahaan, bukan karangan.
+        </p>
+      </header>
 
-        <div className={cn("mt-2 space-y-1", mobileHistoryOpen ? "block" : "hidden", "lg:block")}>
-          <p className="hidden px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 lg:block dark:text-slate-500">
-            Riwayat
-          </p>
-          {loadingSessions ? (
-            <div className="flex items-center justify-center py-6 text-slate-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </div>
-          ) : sessions.length === 0 ? (
-            <p className="px-1 py-3 text-xs text-slate-400 dark:text-slate-500">
-              Belum ada percakapan tersimpan.
-            </p>
-          ) : (
-            <div className="max-h-[60vh] space-y-1 overflow-y-auto pr-0.5">
-              {sessions.map((s) => {
-                const active = s.id === currentSessionId;
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => openSession(s.id)}
-                    className={cn(
-                      "group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors",
-                      active
-                        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/60",
-                    )}
-                  >
-                    <MessageSquare className="h-4 w-4 shrink-0 opacity-70" />
-                    <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeSession(s.id); }}
-                      aria-label="Hapus percakapan"
-                      className="shrink-0 text-slate-300 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100 dark:text-slate-600 dark:hover:text-rose-400"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* ── Kolom chat ── */}
-      <div className="min-w-0">
-        {/* Hero */}
-        <div className="relative mb-5 overflow-hidden rounded-[20px] border border-line bg-surface shadow-sm">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-[200px] w-[200px] rounded-full"
-            style={{ background: "radial-gradient(circle, #C95BC5 0%, transparent 70%)", opacity: 0.12, animation: "hero-ring-1 12s ease-in-out infinite" }} />
-          <div className="pointer-events-none absolute -bottom-[60px] left-1/4 h-[180px] w-[180px] rounded-full"
-            style={{ background: "radial-gradient(circle, #5B5BD6 0%, transparent 70%)", opacity: 0.1, animation: "hero-ring-2 14s ease-in-out infinite" }} />
-          <div aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundImage: "linear-gradient(to right, #5B5BD6, #8A5BD6, #C95BC5)", WebkitMaskImage: "radial-gradient(circle, black 1px, transparent 1px)", maskImage: "radial-gradient(circle, black 1px, transparent 1px)", WebkitMaskSize: "22px 22px", maskSize: "22px 22px", opacity: 0.2, animation: "hero-dots 8s linear infinite" }} />
-
-          <div className="relative flex items-center gap-4 px-8 py-7">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-lg" style={{ background: "linear-gradient(135deg, #5B5BD6, #C95BC5)" }}>
-              <Bot className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(to right, #5B5BD6, #C95BC5)" }}>{ASSISTANT_NAME}</h1>
-              </div>
-              <p className="mt-0.5 text-sm text-ink-secondary">
-                Asisten kebijakan RWP. Jawaban dari dokumen resmi perusahaan.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Area chat */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          {/* Toolbar atas */}
-          {messages.length > 0 && (
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 dark:border-slate-700">
-              <span className="text-xs text-slate-400 dark:text-slate-500">{qaCount} pertanyaan</span>
-              <button
-                onClick={newChat}
-                disabled={thinking}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
-              >
-                <Plus className="h-3.5 w-3.5" /> Chat baru
-              </button>
-            </div>
-          )}
-
-          {/* Percakapan */}
-          <div className="max-h-[52vh] min-h-[320px] space-y-5 overflow-y-auto p-5 sm:p-6">
-            {loadingMsgs ? (
-              <div className="flex items-center justify-center py-16 text-slate-400">
-                <Loader2 className="h-5 w-5 animate-spin" />
-              </div>
-            ) : messages.length === 0 && !thinking ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                  <Sparkles className="h-6 w-6" />
-                </div>
-                <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Mulai bertanya tentang kebijakan &amp; layanan HC
-                </p>
-                <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Misalnya:</p>
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {SUGGESTIONS.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => ask(s)}
-                      className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:bg-slate-600 dark:hover:text-blue-400"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              messages.map((m, i) => (
-                <div key={i} className={m.role === "user" ? "flex justify-end" : "flex gap-3"}>
-                  {m.role === "assistant" && (
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
-                      <Bot className="h-4 w-4" />
-                    </div>
-                  )}
-                  <div
-                    className={
-                      m.role === "user"
-                        ? "max-w-[80%] rounded-2xl rounded-tr-sm bg-gradient-to-br from-blue-600 to-indigo-600 px-4 py-2.5 text-sm text-white shadow-sm"
-                        : "max-w-[80%] rounded-2xl rounded-tl-sm bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100 dark:bg-slate-700/60 dark:text-slate-200 dark:ring-slate-600"
-                    }
-                  >
-                    {m.role === "user" ? (
-                      <p className="whitespace-pre-wrap">{m.text}</p>
-                    ) : (
-                      <MarkdownMessage text={m.text} />
-                    )}
-                    {m.sources && m.sources.length > 0 && (
-                      <div className="mt-2.5 flex items-center gap-1.5 border-t border-slate-200 pt-2 text-xs text-slate-400 dark:border-slate-600 dark:text-slate-500">
-                        <FileText className="h-3.5 w-3.5 shrink-0" />
-                        Sumber: {m.sources.join(", ")}
-                      </div>
-                    )}
-                    {m.actions && m.actions.length > 0 && (
-                      <div className="mt-3 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-600">
-                        {m.actions.filter((a) => a.type === "policy").map((a) => (
-                          <button
-                            key={a.url}
-                            onClick={() => router.push(a.url)}
-                            className="flex w-full items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
-                          >
-                            <FileText className="h-3.5 w-3.5 shrink-0" />
-                            {a.label}
-                          </button>
-                        ))}
-                        {m.actions.filter((a) => a.type === "tiket").map((a) => (
-                          <div key={a.url}>
-                            {a.description && (
-                              <p className="mb-1.5 text-xs text-slate-400 dark:text-slate-500">{a.description}</p>
-                            )}
-                            <button
-                              onClick={() => router.push(a.url)}
-                              className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs font-medium text-slate-600 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:bg-slate-700 dark:hover:text-indigo-400"
-                            >
-                              {a.type === "policy"
-                                ? <FileText className="h-3.5 w-3.5 shrink-0" />
-                                : <ShieldAlert className="h-3.5 w-3.5 shrink-0" />}
-                              {a.label}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-
-            {thinking && (
-              <div className="flex gap-3">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
-                  <Bot className="h-4 w-4" />
-                </div>
-                <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm bg-slate-50 px-4 py-3 ring-1 ring-slate-100 dark:bg-slate-700/60 dark:ring-slate-600">
-                  <Dot /> <Dot delay="0.15s" /> <Dot delay="0.3s" />
-                </div>
-              </div>
-            )}
-            <div ref={endRef} />
-          </div>
-
-          {/* Input */}
-          <form onSubmit={onSubmit} className="flex items-center gap-2 border-t border-slate-100 p-3 dark:border-slate-700">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Tulis pertanyaan Anda…"
-              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-700 dark:focus:ring-blue-900/30"
-            />
-            <Button type="submit" disabled={!input.trim() || thinking} className="shrink-0">
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
-        </div>
-
-        {/* Prompt rating — muncul di jeda alami */}
-        {ratingFor && <RatingPrompt onSubmit={submitRating} onDismiss={dismissRating} />}
-
-        {/* Tombol aksi — hanya untuk karyawan */}
-        {user?.role === "karyawan" && (
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <button
-              onClick={() => router.push("/psikologi")}
-              className="group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-5 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md hover:shadow-teal-100/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-teal-700 dark:hover:shadow-teal-950/30"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
-                <HeartHandshake className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Layanan Psikologi</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Konseling &amp; careline 24/7.</p>
-              </div>
-            </button>
-            <button
-              onClick={() => router.push("/lapor")}
-              className="group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-5 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-200 hover:shadow-md hover:shadow-rose-100/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-rose-700 dark:hover:shadow-rose-950/30"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-sm">
-                <ShieldAlert className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Pelaporan RWP</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Rahasia &amp; terlindungi.</p>
-              </div>
-            </button>
-          </div>
+      <div
+        className={cn(
+          "pembuka-masuk mt-8",
+          "lg:grid lg:grid-cols-[256px_minmax(0,1fr)] lg:items-start lg:gap-x-12",
         )}
+        style={{ animationDelay: "110ms" }}
+      >
+        {/* ── Sidebar riwayat ── */}
+        <aside className="mb-8 lg:mb-0 lg:sticky lg:top-6">
+          <button
+            type="button"
+            onClick={newChat}
+            className={cn(
+              "flex h-11 w-full items-center justify-center gap-2 rounded-full",
+              "border border-garis-kuat bg-kartu px-5 text-bantu font-semibold text-tinta",
+              "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar",
+              "active:scale-[.99]",
+            )}
+          >
+            <Plus size={18} aria-hidden="true" /> Chat baru
+          </button>
+
+          {/* Toggle riwayat di HP */}
+          <button
+            type="button"
+            onClick={() => setMobileHistoryOpen((o) => !o)}
+            aria-expanded={mobileHistoryOpen}
+            className={cn(
+              "mt-3 flex h-11 w-full items-center justify-between rounded-full",
+              "border border-garis bg-kartu px-4 text-bantu font-medium text-redup",
+              "transition-colors duration-150 ease-[var(--ease-standar)] hover:text-tinta",
+              "lg:hidden",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <ClockCounterClockwise size={18} aria-hidden="true" /> Riwayat percakapan
+            </span>
+            {sessions.length > 0 && (
+              <span className="text-mikro font-semibold text-redup tabular-nums">
+                {sessions.length}
+              </span>
+            )}
+          </button>
+
+          <div className={cn("mt-3", mobileHistoryOpen ? "block" : "hidden", "lg:block")}>
+            <p className="hidden px-3 pb-2 text-mikro font-semibold text-redup lg:block">
+              Riwayat
+            </p>
+
+            {loadingSessions ? (
+              <div className="flex items-center justify-center py-6 text-redup">
+                <CircleNotch size={18} className="animate-spin" aria-hidden="true" />
+                <span className="sr-only">Memuat riwayat percakapan…</span>
+              </div>
+            ) : sessions.length === 0 ? (
+              <p className="px-3 py-3 text-bantu text-redup">
+                Belum ada percakapan tersimpan. Ajukan pertanyaan pertamamu di bawah.
+              </p>
+            ) : (
+              <ul className="max-h-[60vh] space-y-1 overflow-y-auto pr-1">
+                {sessions.map((s) => {
+                  const active = s.id === currentSessionId;
+                  return (
+                    <li key={s.id} className="group relative">
+                      <button
+                        type="button"
+                        onClick={() => openSession(s.id)}
+                        aria-current={active || undefined}
+                        className={cn(
+                          "flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-input)]",
+                          "py-2 pl-3 pr-11 text-left text-bantu",
+                          "transition-colors duration-150 ease-[var(--ease-standar)]",
+                          active
+                            ? "bg-latar font-semibold text-tinta"
+                            : "text-redup hover:bg-latar hover:text-tinta",
+                        )}
+                      >
+                        <ChatCircle size={16} aria-hidden="true" className="shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">{s.title}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSession(s.id)}
+                        aria-label={`Hapus percakapan ${s.title}`}
+                        className={cn(
+                          "absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center",
+                          "rounded-full text-redup opacity-0",
+                          "transition-[color,opacity] duration-150 ease-[var(--ease-standar)]",
+                          "hover:text-merah group-hover:opacity-100 focus-visible:opacity-100",
+                        )}
+                      >
+                        <Trash size={16} aria-hidden="true" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </aside>
+
+        {/* ── Kolom percakapan ── */}
+        <div className="min-w-0">
+          <div className="rounded-[var(--radius-panel)] border border-garis bg-kartu">
+            {/* Toolbar atas */}
+            {messages.length > 0 && (
+              <div className="flex items-center justify-between gap-3 border-b border-garis px-4 py-2">
+                <span className="text-mikro font-semibold text-redup tabular-nums">
+                  {qaCount} pertanyaan
+                </span>
+                <button
+                  type="button"
+                  onClick={newChat}
+                  disabled={thinking}
+                  className={cn(
+                    "flex h-11 items-center gap-1.5 rounded-full px-3 text-bantu font-medium text-redup",
+                    "transition-colors duration-150 ease-[var(--ease-standar)]",
+                    "hover:bg-latar hover:text-tinta disabled:cursor-not-allowed disabled:opacity-40",
+                  )}
+                >
+                  <Plus size={16} aria-hidden="true" /> Chat baru
+                </button>
+              </div>
+            )}
+
+            {/* Percakapan */}
+            <div className="max-h-[52vh] min-h-[320px] space-y-5 overflow-y-auto p-5 sm:p-6">
+              {loadingMsgs ? (
+                <div className="flex items-center justify-center py-16 text-redup">
+                  <CircleNotch size={20} className="animate-spin" aria-hidden="true" />
+                  <span className="sr-only">Memuat percakapan…</span>
+                </div>
+              ) : messages.length === 0 && !thinking ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full border border-garis bg-latar text-tinta">
+                    <Sparkle size={22} aria-hidden="true" />
+                  </span>
+                  <p className="mt-4 text-isi font-semibold text-tinta">
+                    Mulai bertanya soal kebijakan RWP
+                  </p>
+                  <p className="mt-1 text-bantu text-redup">Misalnya:</p>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {SUGGESTIONS.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => ask(s)}
+                        className={cn(
+                          "inline-flex min-h-11 items-center rounded-full border border-garis-kuat bg-kartu px-4",
+                          "text-bantu text-tinta",
+                          "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                messages.map((m, i) => (
+                  <div key={i} className={m.role === "user" ? "flex justify-end" : "flex gap-3"}>
+                    {m.role === "assistant" && <AvatarAsisten />}
+                    <div
+                      className={cn(
+                        "max-w-[80%] rounded-[var(--radius-kartu)] px-4 py-3 text-bantu leading-[1.6]",
+                        m.role === "user"
+                          ? "bg-tinta text-kartu"
+                          : "border border-garis bg-kartu text-tinta",
+                      )}
+                    >
+                      {m.role === "user" ? (
+                        <p className="whitespace-pre-wrap">{m.text}</p>
+                      ) : (
+                        <MarkdownMessage text={m.text} />
+                      )}
+
+                      {m.sources && m.sources.length > 0 && (
+                        <div className="mt-3 flex items-start gap-1.5 border-t border-garis pt-2 text-mikro text-redup">
+                          <FileText size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+                          Sumber: {m.sources.join(", ")}
+                        </div>
+                      )}
+
+                      {m.actions && m.actions.length > 0 && (
+                        <div className="mt-3 space-y-3 border-t border-garis pt-3">
+                          {/* Pil kebijakan */}
+                          {m.actions.some((a) => a.type === "policy") && (
+                            <div className="flex flex-wrap gap-2">
+                              {m.actions
+                                .filter((a) => a.type === "policy")
+                                .map((a) => (
+                                  <PilAksi
+                                    key={a.url}
+                                    label={a.label}
+                                    ikon={<FileText size={16} aria-hidden="true" />}
+                                    onClick={() => router.push(a.url)}
+                                  />
+                                ))}
+                            </div>
+                          )}
+
+                          {/* Pil pelaporan — boleh punya keterangan di atasnya */}
+                          {m.actions
+                            .filter((a) => a.type === "tiket")
+                            .map((a) => (
+                              <div key={a.url}>
+                                {a.description && (
+                                  <p className="mb-2 text-mikro text-redup">{a.description}</p>
+                                )}
+                                <PilAksi
+                                  label={a.label}
+                                  ikon={<ShieldWarning size={16} aria-hidden="true" />}
+                                  onClick={() => router.push(a.url)}
+                                />
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {thinking && (
+                <div className="flex gap-3">
+                  <AvatarAsisten />
+                  <div className="flex items-center gap-1 rounded-[var(--radius-kartu)] border border-garis bg-kartu px-4 py-3">
+                    <Dot /> <Dot delay="0.15s" /> <Dot delay="0.3s" />
+                    <span className="sr-only">{ASSISTANT_NAME} sedang menyusun jawaban…</span>
+                  </div>
+                </div>
+              )}
+              <div ref={endRef} />
+            </div>
+
+            {/* Kolom tanya */}
+            <form onSubmit={onSubmit} className="flex items-center gap-2 border-t border-garis p-4">
+              <label htmlFor="tanya-asisten" className="sr-only">
+                Tulis pertanyaan
+              </label>
+              <Input
+                id="tanya-asisten"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Tulis pertanyaanmu di sini…"
+                autoComplete="off"
+                className="min-w-0 flex-1"
+              />
+              <Button
+                type="submit"
+                aria-label="Kirim pertanyaan"
+                disabled={!input.trim() || thinking}
+                className="h-11 w-11 shrink-0 px-0"
+              >
+                <PaperPlaneRight size={18} aria-hidden="true" />
+              </Button>
+            </form>
+          </div>
+
+          {/* Prompt rating — muncul di jeda alami */}
+          {ratingFor && <RatingPrompt onSubmit={submitRating} onDismiss={dismissRating} />}
+
+          {/* Jalur lain — hanya untuk karyawan */}
+          {user?.role === "karyawan" && (
+            <section className="mt-8">
+              <h2 className="mb-3 text-bantu font-[650] text-tinta">Jalur lain</h2>
+              <ItemCardGrid>
+                {JALUR_LAIN.map((j, i) => (
+                  <ItemCard
+                    key={j.href}
+                    nama={j.nama}
+                    deskripsi={j.deskripsi}
+                    indeks={i}
+                    onBuka={() => router.push(j.href)}
+                  />
+                ))}
+              </ItemCardGrid>
+            </section>
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+// ─── Potongan kecil ────────────────────────────────────────────────────────────
+
+function AvatarAsisten() {
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-garis bg-latar text-tinta"
+    >
+      <Robot size={16} />
+    </span>
+  );
+}
+
+/** Chip aksi berbentuk pil bertoken (§Komponen — tombol, label, chip = pil). */
+function PilAksi({
+  label,
+  ikon,
+  onClick,
+}: {
+  label: string;
+  ikon: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex min-h-11 items-center gap-2 rounded-full border border-garis-kuat bg-kartu px-4",
+        "text-bantu font-medium text-tinta",
+        "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar",
+        "active:scale-[.99]",
+      )}
+    >
+      {ikon}
+      {label}
+    </button>
   );
 }
 
@@ -512,37 +631,46 @@ function RatingPrompt({
   const [comment, setComment] = useState("");
 
   return (
-    <div className="animate-in relative mt-5 overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-sm dark:border-blue-800/50 dark:from-blue-950/30 dark:to-indigo-950/20">
+    <div className="animate-in relative mt-5 rounded-[var(--radius-kartu)] border border-garis bg-kartu p-5">
       <button
+        type="button"
         onClick={onDismiss}
-        aria-label="Tutup"
-        className="absolute right-3 top-3 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
+        aria-label="Tutup penilaian"
+        className={cn(
+          "absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-redup",
+          "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar hover:text-tinta",
+        )}
       >
-        <X className="h-4 w-4" />
+        <X size={18} aria-hidden="true" />
       </button>
 
-      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+      <p className="pr-12 text-bantu font-semibold text-tinta">
         Seberapa membantu {ASSISTANT_NAME} sejauh ini?
       </p>
-      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-1 text-bantu text-redup">
         Masukanmu membantu kami memperbaiki asisten ini.
       </p>
 
-      <div className="mt-3 flex items-center gap-1.5" onMouseLeave={() => setHover(0)}>
+      <div className="mt-2 flex items-center" onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map((n) => {
           const filled = (hover || stars) >= n;
           return (
             <button
               key={n}
+              type="button"
               onClick={() => setStars(n)}
               onMouseEnter={() => setHover(n)}
               aria-label={`${n} bintang`}
-              className="transition-transform hover:scale-110"
+              aria-pressed={stars === n}
+              className="flex h-11 w-11 items-center justify-center rounded-full"
             >
               <Star
+                size={26}
+                weight={filled ? "fill" : "regular"}
+                aria-hidden="true"
                 className={cn(
-                  "h-7 w-7 transition-colors",
-                  filled ? "fill-amber-400 text-amber-400" : "fill-transparent text-slate-300 dark:text-slate-600",
+                  "transition-colors duration-150 ease-[var(--ease-standar)]",
+                  filled ? "text-tinta" : "text-garis-kuat",
                 )}
               />
             </button>
@@ -552,15 +680,24 @@ function RatingPrompt({
 
       {stars > 0 && (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
+          <label htmlFor="komentar-rating" className="sr-only">
+            Komentar penilaian
+          </label>
+          <Input
+            id="komentar-rating"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             maxLength={300}
             placeholder="Komentar (opsional)…"
-            className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+            className="min-w-0 flex-1"
           />
-          <Button onClick={() => onSubmit(stars, comment)} className="shrink-0">
-            Kirim
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onSubmit(stars, comment)}
+            className="h-11 shrink-0"
+          >
+            Kirim penilaian
           </Button>
         </div>
       )}
@@ -573,22 +710,27 @@ function MarkdownMessage({ text }: { text: string }) {
     <div className="space-y-2">
       <ReactMarkdown
         components={{
-          p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+          p: ({ children }) => <p className="leading-[1.6]">{children}</p>,
           strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
           ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
-          li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-          h1: ({ children }) => <h3 className="text-base font-bold">{children}</h3>,
-          h2: ({ children }) => <h3 className="text-base font-bold">{children}</h3>,
-          h3: ({ children }) => <h3 className="text-sm font-bold">{children}</h3>,
+          li: ({ children }) => <li className="leading-[1.6]">{children}</li>,
+          h1: ({ children }) => <h3 className="text-isi font-bold text-tinta">{children}</h3>,
+          h2: ({ children }) => <h3 className="text-isi font-bold text-tinta">{children}</h3>,
+          h3: ({ children }) => <h3 className="text-bantu font-bold text-tinta">{children}</h3>,
           a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline dark:text-blue-400">
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-tinta underline underline-offset-4 hover:text-merah"
+            >
               {children}
             </a>
           ),
           code: ({ children }) => (
-            <code className="rounded bg-slate-200 px-1 py-0.5 text-[0.85em] dark:bg-slate-600">{children}</code>
+            <code className="rounded bg-latar px-1 py-0.5 text-[0.85em]">{children}</code>
           ),
         }}
       >
@@ -601,7 +743,8 @@ function MarkdownMessage({ text }: { text: string }) {
 function Dot({ delay = "0s" }: { delay?: string }) {
   return (
     <span
-      className="inline-block h-2 w-2 animate-bounce rounded-full bg-slate-300 dark:bg-slate-500"
+      aria-hidden="true"
+      className="inline-block h-2 w-2 animate-bounce rounded-full bg-redup"
       style={{ animationDelay: delay }}
     />
   );
