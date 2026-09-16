@@ -190,3 +190,24 @@ table, .tabular {
     scroll-behavior: auto !important;
   }
 }
+
+/* Bentuk di ikon generatif membesar dari 0.2 ke 1 (docs/DESIGN.md §Gerak). */
+@keyframes ikonPop {
+  from { transform: scale(0.2); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* Isi panel detail berganti: naik 6px sambil muncul. */
+@keyframes panelMasuk {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Pembuka layar: naik 14px sambil muncul. */
+@keyframes pembukaMasuk {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pembuka-masuk {
+  animation: pembukaMasuk 700ms var(--ease-keluar) both;
+}
