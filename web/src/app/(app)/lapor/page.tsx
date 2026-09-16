@@ -3,8 +3,8 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle2, ShieldAlert, Upload, X, ChevronLeft,
-} from "lucide-react";
+  CheckCircle, WarningCircle, UploadSimple, X, CaretLeft,
+} from "@phosphor-icons/react";
 import { KATEGORI_INSIDEN } from "@/lib/constants";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
@@ -12,7 +12,9 @@ import { localIsoDate } from "@/lib/utils";
 import { validateFiles, formatRejections, ACCEPT_ATTR } from "@/lib/fileValidation";
 import { Button } from "@/components/ui/Button";
 import { Field, GlassSelect, Input, Textarea } from "@/components/ui/Field";
-import { DotGrid } from "@/components/ui/DotGrid";
+import { Panel } from "@/components/ui/Panel";
+import { Card } from "@/components/ui/Card";
+import { StatusLabel } from "@/components/hc/StatusLabel";
 
 export default function LaporPage() {
   const { user } = useAuth();
@@ -89,35 +91,47 @@ export default function LaporPage() {
   /* ── State: tiket berhasil dibuat ── */
   if (ticket) {
     return (
-      <div className="space-y-4">
-        {/* Hero sukses */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-slate-900 p-6 text-white sm:p-8">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 left-4 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
-          <DotGrid className="opacity-[0.06]" />
-          <div className="relative flex flex-col items-center py-4 text-center sm:py-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/30 backdrop-blur-sm">
-              <CheckCircle2 className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="mt-4 text-2xl font-bold">Laporan Terkirim</h1>
-            <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-emerald-100/90">
-              Laporan Anda telah diterima tim HC. Simpan nomor tiket berikut untuk melacak status penanganan.
-            </p>
-            <div className="mt-5 rounded-2xl bg-white/15 px-8 py-3.5 ring-1 ring-white/25 backdrop-blur-sm">
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-200">Nomor Tiket</p>
-              <p className="mt-1 font-mono text-2xl font-bold tracking-wide">{ticket}</p>
-            </div>
-          </div>
-        </div>
+      <div>
+        <p
+          className="pembuka-masuk flex items-center gap-2 text-isi font-medium text-redup"
+          style={{ animationDelay: "0ms" }}
+        >
+          <CheckCircle size={20} aria-hidden="true" className="text-sukses" />
+          Terkirim
+        </p>
 
-        {/* Aksi */}
-        <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={() => { setTicket(null); resetForm(); }}>
-            Buat laporan lain
-          </Button>
-          <Button className="flex-1" onClick={() => router.push("/laporan")}>
-            Lacak laporan
-          </Button>
+        <h1
+          className="pembuka-masuk mt-2 text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta"
+          style={{ animationDelay: "60ms" }}
+        >
+          Laporan terkirim
+        </h1>
+
+        <p
+          className="pembuka-masuk mt-4 max-w-[44ch] text-subjudul leading-[1.5] text-redup"
+          style={{ animationDelay: "110ms" }}
+        >
+          Laporan Anda diterima tim HC. Simpan nomor tiket berikut untuk melacak
+          penanganannya.
+        </p>
+
+        <div className="pembuka-masuk mt-8" style={{ animationDelay: "170ms" }}>
+          <div className="rounded-[var(--radius-panel)] border border-garis bg-kartu p-4 sm:p-6">
+            <p className="text-mikro font-semibold text-redup">Nomor tiket</p>
+            <p className="mt-2 font-mono text-panel font-bold tabular tracking-[-0.025em] text-tinta">
+              {ticket}
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => { setTicket(null); resetForm(); }}
+            >
+              Buat laporan lain
+            </Button>
+            <Button onClick={() => router.push("/laporan")}>Lacak laporan</Button>
+          </div>
         </div>
       </div>
     );
@@ -125,128 +139,103 @@ export default function LaporPage() {
 
   /* ── State: form utama ── */
   return (
-    <div className="space-y-5">
+    <div>
       {/* Tombol kembali */}
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
         type="button"
         onClick={() => router.back()}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
       >
-        <ChevronLeft className="h-4 w-4" /> Kembali
-      </button>
+        <CaretLeft size={16} aria-hidden="true" /> Kembali
+      </Button>
 
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl border border-line bg-surface shadow-sm">
-        {/* Circles gradient */}
-        <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full"
-          style={{ background: "radial-gradient(circle, #e11d48 0%, transparent 70%)", opacity: 0.12, animation: "hero-ring-1 12s ease-in-out infinite" }} />
-        <div className="pointer-events-none absolute -bottom-24 left-6 h-80 w-80 rounded-full"
-          style={{ background: "radial-gradient(circle, #f43f5e 0%, transparent 70%)", opacity: 0.1, animation: "hero-ring-2 14s ease-in-out infinite" }} />
-        {/* Dot grid gradient */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: "linear-gradient(to right, #f43f5e, #e11d48)",
-            WebkitMaskImage: "radial-gradient(circle, black 1px, transparent 1px)",
-            maskImage: "radial-gradient(circle, black 1px, transparent 1px)",
-            WebkitMaskSize: "22px 22px",
-            maskSize: "22px 22px",
-            opacity: 0.2,
-            animation: "hero-dots 8s linear infinite",
-          }}
-        />
-        <div className="relative p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-lg"
-              style={{ background: "linear-gradient(135deg, #f43f5e, #e11d48)" }}
-            >
-              <ShieldAlert className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1
-                className="text-2xl font-bold bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(to right, #f43f5e, #e11d48)" }}
-              >
-                RWP
-              </h1>
-              <p className="text-sm text-ink-secondary">Respectful Workplace Policy</p>
-            </div>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-ink-secondary">
-            Laporkan pelecehan, diskriminasi, perundungan, atau intimidasi di lingkungan kerja.
-            Identitas Anda sebagai pelapor dijamin aman dan terlindungi.
-          </p>
-        </div>
+      {/* ── Pembuka layar ── */}
+      <h1
+        className="pembuka-masuk mt-6 text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta"
+        style={{ animationDelay: "0ms" }}
+      >
+        Lapor insiden
+      </h1>
+      <p
+        className="pembuka-masuk mt-4 max-w-[44ch] text-subjudul leading-[1.5] text-redup"
+        style={{ animationDelay: "60ms" }}
+      >
+        Laporkan pelecehan, diskriminasi, perundungan, atau intimidasi di lingkungan
+        kerja.
+      </p>
+      <div className="pembuka-masuk mt-5" style={{ animationDelay: "110ms" }}>
+        <StatusLabel>Identitas pelapor dilindungi</StatusLabel>
       </div>
 
       {/* ── Form ── */}
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="mt-8 space-y-4">
         {/* Blok: Insiden */}
-        <FormSection title="Detail Insiden">
-          <Field label="Kategori insiden" required>
-            <GlassSelect
-              value={kategori}
-              onChange={setKategori}
-              placeholder="— Pilih kategori —"
-              options={KATEGORI_INSIDEN.map((k) => ({ value: k, label: k }))}
-            />
-          </Field>
-
-          <Field label="Judul / ringkasan singkat" required>
-            <Input
-              maxLength={140}
-              value={judul}
-              onChange={(e) => setJudul(e.target.value)}
-              placeholder="Contoh: Perundungan verbal di tim proyek"
-            />
-          </Field>
-
-          <Field label="Kronologi kejadian" required>
-            <Textarea
-              rows={6}
-              value={kronologi}
-              onChange={(e) => setKronologi(e.target.value)}
-              placeholder="Jelaskan kejadian secara runut: apa, kapan, di mana, siapa yang terlibat…"
-            />
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Tanggal kejadian" required>
-              <Input
-                type="date"
-                value={tanggal}
-                max={today}
-                onChange={(e) => { setTanggal(e.target.value); setError(""); }}
+        <Panel title="Detail insiden">
+          <div className="space-y-4">
+            <Field label="Kategori insiden" required>
+              <GlassSelect
+                value={kategori}
+                onChange={setKategori}
+                placeholder="— Pilih kategori —"
+                options={KATEGORI_INSIDEN.map((k) => ({ value: k, label: k }))}
               />
             </Field>
-            <Field label="Lokasi" hint="Opsional">
+
+            <Field label="Judul / ringkasan singkat" required>
               <Input
-                value={lokasi}
-                onChange={(e) => setLokasi(e.target.value)}
-                placeholder="mis. Kantor Pusat Lt. 5"
+                maxLength={140}
+                value={judul}
+                onChange={(e) => setJudul(e.target.value)}
+                placeholder="Contoh: Perundungan verbal di tim proyek"
+              />
+            </Field>
+
+            <Field label="Kronologi kejadian" required>
+              <Textarea
+                rows={6}
+                value={kronologi}
+                onChange={(e) => setKronologi(e.target.value)}
+                placeholder="Jelaskan kejadian secara runut: apa, kapan, di mana, siapa yang terlibat…"
+              />
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Tanggal kejadian" required>
+                <Input
+                  type="date"
+                  value={tanggal}
+                  max={today}
+                  onChange={(e) => { setTanggal(e.target.value); setError(""); }}
+                />
+              </Field>
+              <Field label="Lokasi" hint="Opsional">
+                <Input
+                  value={lokasi}
+                  onChange={(e) => setLokasi(e.target.value)}
+                  placeholder="mis. Kantor Pusat Lt. 5"
+                />
+              </Field>
+            </div>
+
+            <Field label="Pihak terlapor" hint="Opsional — nama atau inisial">
+              <Input
+                value={terlapor}
+                onChange={(e) => setTerlapor(e.target.value)}
+                placeholder="mis. Inisial A.B."
               />
             </Field>
           </div>
-
-          <Field label="Pihak terlapor" hint="Opsional — nama atau inisial">
-            <Input
-              value={terlapor}
-              onChange={(e) => setTerlapor(e.target.value)}
-              placeholder="mis. Inisial A.B."
-            />
-          </Field>
-        </FormSection>
+        </Panel>
 
         {/* Blok: Bukti */}
-        <FormSection title="Bukti Pendukung" hint="Opsional">
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-6 py-7 text-center transition-colors hover:border-rose-300 hover:bg-rose-50/40 dark:border-slate-600 dark:bg-slate-700/30 dark:hover:border-rose-500/60 dark:hover:bg-rose-900/10">
-            <Upload className="h-5 w-5 text-slate-400 dark:text-slate-500" />
-            <span className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        <Panel title="Bukti pendukung (opsional)">
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius-input)] border border-dashed border-garis-kuat bg-latar px-6 py-7 text-center transition-colors duration-150 hover:border-tinta">
+            <UploadSimple size={20} aria-hidden="true" className="text-redup" />
+            <span className="mt-2 text-bantu font-semibold text-tinta">
               Klik untuk mengunggah
             </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
+            <span className="mt-1 text-bantu text-redup">
               Gambar, PDF, dokumen, atau audio · Maks 10 MB per file
             </span>
             <input type="file" multiple accept={ACCEPT_ATTR} className="hidden" onChange={onFiles} />
@@ -257,48 +246,49 @@ export default function LaporPage() {
               {files.map((f, i) => (
                 <li
                   key={i}
-                  className="flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600 ring-1 ring-slate-200 dark:bg-slate-700/60 dark:text-slate-300 dark:ring-slate-600"
+                  className="flex items-center justify-between gap-3 rounded-[var(--radius-input)] border border-garis bg-latar px-3.5 py-2.5 text-bantu text-tinta"
                 >
                   <span className="truncate">{f.name}</span>
                   <button
                     type="button"
+                    aria-label={`Hapus ${f.name}`}
                     onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="ml-3 shrink-0 text-slate-400 transition-colors hover:text-rose-500 dark:text-slate-500 dark:hover:text-rose-400"
+                    className="shrink-0 text-redup transition-colors duration-150 hover:text-merah"
                   >
-                    <X className="h-4 w-4" />
+                    <X size={16} aria-hidden="true" />
                   </button>
                 </li>
               ))}
             </ul>
           )}
-        </FormSection>
+        </Panel>
 
         {/* Blok: Anonimitas */}
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-          <label className="flex cursor-pointer items-start gap-4 p-5">
+        <Card>
+          <label className="flex cursor-pointer items-start gap-4 p-4 sm:p-6">
             <input
               type="checkbox"
               checked={anonim}
               onChange={(e) => setAnonim(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-300 dark:border-slate-500 dark:focus:ring-rose-600"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-garis-kuat accent-tinta"
             />
             <div>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">
+              <p className="text-isi font-[650] leading-[1.35] tracking-[-0.01em] text-tinta">
                 Laporkan secara anonim
               </p>
-              <p className="mt-0.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-bantu leading-[1.5] text-redup">
                 Identitas Anda disembunyikan dari admin HC. Anonimitas bersifat <em>prosedural</em> —
                 sistem tetap menyimpan kaitan ke akun untuk keperluan anti-spam dan tindak lanjut jika diperlukan,
                 namun tidak ditampilkan kepada siapa pun.
               </p>
             </div>
           </label>
-        </div>
+        </Card>
 
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:ring-rose-800/60">
-            <ShieldAlert className="h-4 w-4 shrink-0" />
+          <div className="flex items-start gap-2 rounded-[var(--radius-input)] border border-garis bg-merah-latar px-4 py-3 text-bantu text-merah">
+            <WarningCircle size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
             {error}
           </div>
         )}
@@ -306,36 +296,10 @@ export default function LaporPage() {
         {/* Submit */}
         <div className="flex justify-end pb-2">
           <Button type="submit" size="lg" disabled={submitting}>
-            {submitting ? "Mengirim…" : "Kirim Laporan"}
+            {submitting ? "Mengirim…" : "Kirim laporan"}
           </Button>
         </div>
       </form>
-    </div>
-  );
-}
-
-function FormSection({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-      <div className="border-b border-slate-100 px-5 py-3.5 dark:border-slate-700/60">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-          {title}
-          {hint && (
-            <span className="ml-1.5 text-xs font-normal text-slate-400 dark:text-slate-500">
-              — {hint}
-            </span>
-          )}
-        </h2>
-      </div>
-      <div className="space-y-4 p-5">{children}</div>
     </div>
   );
 }
