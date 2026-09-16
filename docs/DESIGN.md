@@ -36,12 +36,15 @@ app HC, jadi nilainya dikunci. Karakter aplikasi ini datang dari tiga hal lain:
 
 1. **Aksen lembut** (`lembut`, `lembut-latar`, `lembut-garis`) — rose pastel.
    Dipakai TERBATAS pada permukaan yang sifatnya menyambut: sapaan di beranda,
-   pembuka halaman masuk, blok Layanan Psikologi, dan keadaan kosong yang
-   mengajak bertindak.
+   pembuka halaman masuk, blok Layanan Psikologi, keadaan kosong yang
+   mengajak bertindak, serta di landing page publik pada pratinjau pelacakan
+   di hero dan blok asisten.
 2. **Ramp data pastel** (`data-1` sampai `data-5`) — rose, periwinkle, mint,
-   lilac, apricot. Dipakai untuk deret chart dan pengelompokan kategori. Lima
-   rona ini sengaja BERJAUHAN, bukan gradasi satu warna, supaya tiap kategori
-   mudah dibedakan.
+   lilac, apricot. Dipakai untuk deret chart dan pengelompokan kategori,
+   termasuk pengelompokan berurutan di landing page (tiga jaminan, empat
+   langkah) dalam bentuk ubin tipis `bg-data-N/15 border-data-N/40`; teks di
+   atasnya tetap `tinta`, warna hanya penanda urutan. Lima rona ini sengaja
+   BERJAUHAN, bukan gradasi satu warna, supaya tiap kategori mudah dibedakan.
 
    Nilainya wajib lolos validator palet kategorikal, bukan dipilih dengan mata:
    lightness band, chroma floor, pemisahan buta warna, pemisahan mata normal,
