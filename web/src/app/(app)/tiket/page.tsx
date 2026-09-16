@@ -1,29 +1,86 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+// Antrean semua laporan RWP (sisi admin) — pola daftar-detail HC Panel
+// (docs/DESIGN.md §Pola daftar-detail). Ini pekerjaan tampilan: sumber data
+// (useStore), guard admin, sinkronisasi ?status= dari dashboard, paginasi, dan
+// tujuan navigasi (/tiket/[id]) tetap sama.
+//
+// PRIVASI (§9.1): halaman daftar TIDAK PERNAH menampilkan identitas pelapor
+// (nama/NIK). Panel detail pun hanya menyebut cara pelaporannya (anonim atau
+// teridentifikasi), bukan siapa orangnya.
+
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ChevronLeft, ChevronRight, ListChecks, Calendar,
-} from "lucide-react";
+import { CalendarBlank, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import { STATUSES } from "@/lib/constants";
-import { cn, formatDateTime } from "@/lib/utils";
-import { StatusPill } from "@/components/ui/StatusPill";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { Field, Input } from "@/components/ui/Field";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchField } from "@/components/hc/SearchField";
+import { FilterTabs } from "@/components/hc/FilterTabs";
+import { DataTable, type Kolom } from "@/components/hc/DataTable";
+import { ItemCard, ItemCardGrid } from "@/components/hc/ItemCard";
+import { DetailPanel } from "@/components/hc/DetailPanel";
+import { KosongHC } from "@/components/hc/KosongHC";
+import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
+import { useDaftarDetail } from "@/components/hc/useDaftarDetail";
+import type { Report } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
+/** Ringkas kronologi untuk panel detail — isi lengkapnya ada di halaman detail. */
+function ringkas(teks: string, maks = 180): string {
+  const bersih = teks.replace(/\s+/g, " ").trim();
+  return bersih.length <= maks ? bersih : `${bersih.slice(0, maks).trimEnd()}…`;
+}
+
+const KOLOM: Kolom<Report>[] = [
+  {
+    kunci: "tiket",
+    judul: "Tiket",
+    lebar: "118px",
+    render: (r) => <span className="font-mono text-mikro text-redup">{r.ticketNo}</span>,
+  },
+  { kunci: "judul", judul: "Judul", render: (r) => <span className="line-clamp-2">{r.judul}</span> },
+  { kunci: "kategori", judul: "Kategori", render: (r) => <span className="text-redup">{r.kategori}</span> },
+  {
+    kunci: "masuk",
+    judul: "Masuk",
+    render: (r) => <span className="whitespace-nowrap text-redup">{formatDate(r.createdAt)}</span>,
+  },
+  {
+    kunci: "selesai",
+    judul: "Selesai",
+    render: (r) => (
+      <span className="whitespace-nowrap text-redup">
+        {r.resolvedAt ? formatDate(r.resolvedAt) : "—"}
+      </span>
+    ),
+  },
+  { kunci: "status", judul: "Status", render: (r) => <StatusLabelLaporan status={r.status} /> },
+];
+
 export default function TiketPage() {
+  // useSearchParams (?status= & ?pilih=) butuh batas Suspense.
+  return (
+    <Suspense fallback={<p className="pt-6 text-isi text-redup">Memuat daftar laporan…</p>}>
+      <IsiTiket />
+    </Suspense>
+  );
+}
+
+function IsiTiket() {
   const { user } = useAuth();
   const { reports } = useStore();
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const [cari, setCari] = useState("");
   const [fStatus, setFStatus] = useState(searchParams.get("status") ?? "");
   const [fDate, setFDate] = useState("");
   const [page, setPage] = useState(0);
+  const daftarRef = useRef<HTMLDivElement>(null);
 
   // Sinkronkan filter status dari URL (mis. diklik dari dashboard) ke state lokal
   // saat parameter berubah (adjust state during render).
@@ -34,246 +91,279 @@ export default function TiketPage() {
     setFStatus(statusParam);
   }
 
+  const kata = cari.trim().toLowerCase();
+
   // Reset ke halaman pertama saat filter berubah (perubahan URL pun ikut, karena
   // mengubah fStatus → mengubah filterKey).
-  const filterKey = `${fStatus}|${fDate}`;
+  const filterKey = `${fStatus}|${fDate}|${kata}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey);
     setPage(0);
   }
 
-  if (user?.role !== "admin") {
-    return <div className="text-sm text-slate-500">Halaman ini hanya untuk admin HC.</div>;
-  }
+  // Pencarian murni di klien atas data yang sudah ada — tanpa query baru.
+  const cocokKata = (r: Report) =>
+    !kata ||
+    r.ticketNo.toLowerCase().includes(kata) ||
+    r.judul.toLowerCase().includes(kata) ||
+    r.kategori.toLowerCase().includes(kata);
 
-  const filtered = reports
-    .filter((r) => {
-      const inStatus = !fStatus || r.status === fStatus;
-      const inDate = !fDate || r.createdAt.slice(0, 10) === fDate;
-      return inStatus && inDate;
-    })
+  // Dasar hitung tab: semua filter kecuali status, supaya angka di tab berarti.
+  const dasarHitung = reports.filter(
+    (r) => cocokKata(r) && (!fDate || r.createdAt.slice(0, 10) === fDate),
+  );
+
+  const filtered = dasarHitung
+    .filter((r) => !fStatus || r.status === fStatus)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
-  // Count per status (dari seluruh laporan yang terlihat admin ini)
   const countByStatus = STATUSES.reduce<Record<string, number>>((acc, s) => {
-    acc[s] = reports.filter((r) => r.status === s).length;
+    acc[s] = dasarHitung.filter((r) => r.status === s).length;
     return acc;
   }, {});
 
+  const { terpilih, pilih, propsHover } = useDaftarDetail<Report>({
+    items: pageItems,
+    idDari: (r) => r.id,
+  });
+
+  // Guard admin di level logika (§9.2) — setelah semua hook dipanggil.
+  if (user?.role !== "admin") {
+    return <p className="pt-6 text-isi text-redup">Halaman ini hanya untuk admin HC.</p>;
+  }
+
+  const adaFilter = !!(fStatus || fDate || kata);
+  const buka = (r: Report) => router.push(`/tiket/${r.id}`);
+  const resetFilter = () => {
+    setFStatus("");
+    setFDate("");
+    setCari("");
+  };
+
+  // Panah bawah dari kolom cari → item pertama di daftar (§Aksesibilitas).
+  const fokusItemPertama = () => {
+    daftarRef.current
+      ?.querySelector<HTMLElement>('tr[data-baris="ya"], button')
+      ?.focus();
+  };
+
+  const detail = terpilih
+    ? {
+        nama: terpilih.judul,
+        kategori: terpilih.kategori,
+        status: <StatusLabelLaporan status={terpilih.status} />,
+        deskripsi: ringkas(terpilih.kronologi),
+        baris: [
+          {
+            label: "Nomor tiket",
+            nilai: <span className="font-mono">{terpilih.ticketNo}</span>,
+          },
+          { label: "Kategori", nilai: terpilih.kategori },
+          { label: "Status", nilai: terpilih.status },
+          // Hanya cara pelaporannya, bukan identitas pelapor (§9.1).
+          { label: "Pelaporan", nilai: terpilih.isAnonymous ? "Anonim" : "Teridentifikasi" },
+          {
+            label: "Tanggal kejadian",
+            nilai: terpilih.tanggalKejadian ? formatDate(terpilih.tanggalKejadian) : "",
+          },
+          { label: "Lokasi", nilai: terpilih.lokasi ?? "" },
+          { label: "Terlapor", nilai: terpilih.terlapor ?? "" },
+          { label: "Masuk", nilai: formatDateTime(terpilih.createdAt) },
+          { label: "Selesai", nilai: terpilih.resolvedAt ? formatDateTime(terpilih.resolvedAt) : "" },
+        ],
+      }
+    : null;
+
   return (
-    <div>
-      {/* Hero */}
-      <div className="relative mb-6 overflow-hidden rounded-[20px] border border-line bg-surface shadow-sm">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-[200px] w-[200px] rounded-full"
-          style={{ background: "radial-gradient(circle, #C95BC5 0%, transparent 70%)", opacity: 0.12, animation: "hero-ring-1 12s ease-in-out infinite" }} />
-        <div className="pointer-events-none absolute -bottom-[60px] left-1/4 h-[180px] w-[180px] rounded-full"
-          style={{ background: "radial-gradient(circle, #5B5BD6 0%, transparent 70%)", opacity: 0.1, animation: "hero-ring-2 14s ease-in-out infinite" }} />
-        <div aria-hidden className="pointer-events-none absolute inset-0"
-          style={{ backgroundImage: "linear-gradient(to right, #5B5BD6, #8A5BD6, #C95BC5)", WebkitMaskImage: "radial-gradient(circle, black 1px, transparent 1px)", maskImage: "radial-gradient(circle, black 1px, transparent 1px)", WebkitMaskSize: "22px 22px", maskSize: "22px 22px", opacity: 0.2, animation: "hero-dots 8s linear infinite" }} />
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-y-12 pt-6",
+        "lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:gap-x-16 lg:gap-y-8 lg:pt-8",
+      )}
+    >
+      {/* Pembuka: h1, subjudul, kontrol utama (§Spasi — maksimal 4 elemen teks) */}
+      <header className="min-w-0 lg:col-start-1 lg:row-start-1">
+        <h1 className="pembuka-masuk text-halaman leading-[1.05] font-bold tracking-[-0.04em] text-balance text-tinta">
+          Daftar laporan
+        </h1>
 
-        <div className="relative px-8 py-7">
-          {/* Judul */}
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-lg"
-              style={{ background: "linear-gradient(135deg, #5B5BD6, #C95BC5)" }}>
-              <ListChecks className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(to right, #5B5BD6, #C95BC5)" }}>
-                Daftar Laporan
-              </h1>
-              <p className="mt-0.5 text-sm text-ink-secondary">
-                {`Laporan RWP — ${reports.length} laporan masuk`}
-              </p>
-            </div>
+        <p
+          className="pembuka-masuk mt-3 max-w-[44ch] text-subjudul text-redup"
+          style={{ animationDelay: "60ms" }}
+        >
+          Semua laporan RWP yang masuk, siap ditinjau dan ditindaklanjuti tim HC.
+        </p>
+
+        <div className="pembuka-masuk mt-6" style={{ animationDelay: "110ms" }}>
+          <SearchField
+            label="Cari laporan"
+            value={cari}
+            onChange={setCari}
+            placeholder="Nomor tiket, judul, atau kategori"
+            hasilInfo={`${filtered.length} laporan cocok`}
+            onArrowDown={fokusItemPertama}
+            onEnter={() => {
+              const teratas = pageItems[0];
+              if (teratas) buka(teratas);
+            }}
+          />
+        </div>
+      </header>
+
+      {/* Konten daftar */}
+      <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+        <FilterTabs
+          label="Filter status laporan"
+          items={[
+            { id: "", label: "Semua", jumlah: dasarHitung.length },
+            ...STATUSES.map((s) => ({ id: s, label: s, jumlah: countByStatus[s] ?? 0 })),
+          ]}
+          aktif={fStatus}
+          onPilih={setFStatus}
+        />
+
+        <div className="mt-6 flex flex-wrap items-end gap-3">
+          <div className="w-48">
+            <Field label="Tanggal masuk">
+              <div className="relative">
+                <CalendarBlank
+                  size={18}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-redup"
+                />
+                <Input
+                  type="date"
+                  value={fDate}
+                  onChange={(e) => setFDate(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </Field>
           </div>
-
-          {/* Status quick-filter chips */}
-          {reports.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-2">
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setFStatus(fStatus === s ? "" : s)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 transition-all duration-150",
-                    fStatus === s
-                      ? "bg-accent text-white ring-accent/30 shadow-sm"
-                      : "bg-surface-raised text-ink-secondary ring-line hover:bg-slate-100 dark:hover:bg-slate-700",
-                  )}
-                >
-                  {s}
-                  <span className={cn(
-                    "rounded-full px-1.5 py-0.5 text-xs font-bold",
-                    fStatus === s ? "bg-white/25 text-white" : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
-                  )}>
-                    {countByStatus[s] ?? 0}
-                  </span>
-                </button>
-              ))}
-            </div>
+          {adaFilter && (
+            <button
+              type="button"
+              onClick={resetFilter}
+              className={cn(
+                "h-11 shrink-0 rounded-full px-4 text-bantu font-medium text-redup",
+                "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar hover:text-tinta",
+              )}
+            >
+              Reset filter
+            </button>
           )}
         </div>
-      </div>
 
-      {/* Konten */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        {/* Filter bar */}
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Laporan</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              {filtered.length} laporan
-              {fStatus ? ` · ${fStatus}` : ""}
-              {fDate ? ` · ${fDate}` : ""}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="w-44">
-              <Field label="Tanggal masuk">
-                <div className="relative">
-                  <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    type="date"
-                    value={fDate}
-                    onChange={(e) => setFDate(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </Field>
-            </div>
-            {(fStatus || fDate) && (
-              <button
-                onClick={() => { setFStatus(""); setFDate(""); }}
-                className="h-10 rounded-lg px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700/60 dark:hover:text-slate-300"
-              >
-                Reset filter
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile cards */}
-        <div className="divide-y divide-slate-100 dark:divide-slate-700 md:hidden">
-          {pageItems.length === 0 && <PageEmpty hasFilter={!!(fStatus || fDate)} />}
-          {pageItems.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => router.push(`/tiket/${r.id}`)}
-              className="group w-full px-5 py-4 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-slate-400 dark:text-slate-500">{r.ticketNo}</span>
-                  </div>
-                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    {r.judul}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{r.kategori}</p>
-                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                    Masuk: {formatDateTime(r.createdAt)}
-                    {r.resolvedAt && <> · Selesai: {formatDateTime(r.resolvedAt)}</>}
-                  </p>
-                </div>
-                <StatusPill status={r.status} />
+        <div ref={daftarRef} className="mt-6">
+          {pageItems.length === 0 ? (
+            adaFilter ? (
+              <KosongHC
+                judul="Tidak ada laporan yang cocok"
+                ajakan="Ubah kata kunci, status, atau tanggal untuk melihat laporan lainnya."
+                aksiLabel="Reset filter"
+                onAksi={resetFilter}
+              />
+            ) : (
+              <KosongHC
+                judul="Belum ada laporan masuk"
+                ajakan="Laporan karyawan akan muncul di sini begitu dikirim lewat formulir pelaporan."
+              />
+            )
+          ) : (
+            <>
+              {/* Desktop: tabel */}
+              <div className="hidden lg:block">
+                <DataTable<Report>
+                  label="Daftar laporan RWP"
+                  kolom={KOLOM}
+                  data={pageItems}
+                  kunciBaris={(r) => r.id}
+                  terpilih={terpilih?.id ?? null}
+                  onPilih={(r) => pilih(r.id)}
+                  onBuka={buka}
+                />
               </div>
-            </button>
-          ))}
+
+              {/* Di bawah 1024px: kartu, ketuk = aksi utama */}
+              <div className="lg:hidden">
+                <ItemCardGrid>
+                  {pageItems.map((r, i) => {
+                    const hover = propsHover(r);
+                    return (
+                      <ItemCard
+                        key={r.id}
+                        nama={r.judul}
+                        deskripsi={`${r.kategori} · Masuk ${formatDate(r.createdAt)}`}
+                        status={<StatusLabelLaporan status={r.status} />}
+                        indeks={i}
+                        terpilih={hover.terpilih}
+                        onPilih={hover.onPilih}
+                        onMouseEnter={hover.onMouseEnter}
+                        onMouseLeave={hover.onMouseLeave}
+                        onBuka={() => buka(r)}
+                      />
+                    );
+                  })}
+                </ItemCardGrid>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Desktop table */}
-        <div className="hidden md:block">
-          {pageItems.length === 0
-            ? <PageEmpty hasFilter={!!(fStatus || fDate)} />
-            : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/60 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 dark:border-slate-700 dark:bg-slate-700/30 dark:text-slate-500">
-                    <th className="px-5 py-3">Tiket</th>
-                    <th className="px-5 py-3">Judul</th>
-                    <th className="px-5 py-3">Kategori</th>
-                    <th className="px-5 py-3">Masuk</th>
-                    <th className="px-5 py-3">Selesai</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="w-8" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                  {pageItems.map((r) => (
-                    <tr
-                      key={r.id}
-                      onClick={() => router.push(`/tiket/${r.id}`)}
-                      className="group cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30"
-                    >
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{r.ticketNo}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 font-medium text-slate-800 dark:text-slate-200">
-                        {r.judul}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{r.kategori}</td>
-                      <td className="whitespace-nowrap px-5 py-3.5 text-slate-500 dark:text-slate-400">{formatDateTime(r.createdAt)}</td>
-                      <td className="whitespace-nowrap px-5 py-3.5 text-slate-500 dark:text-slate-400">
-                        {r.resolvedAt ? formatDateTime(r.resolvedAt) : "—"}
-                      </td>
-                      <td className="px-5 py-3.5"><StatusPill status={r.status} /></td>
-                      <td className="pr-4">
-                        <ChevronRight className="h-4 w-4 text-slate-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-slate-500 dark:text-slate-600" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-        </div>
-
-        {/* Pagination */}
+        {/* Paginasi — tetap 20 laporan per halaman */}
         {filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3.5 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} dari {filtered.length} tiket
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-garis pt-4">
+            <p className="text-bantu text-redup tabular-nums">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} dari{" "}
+              {filtered.length} laporan
             </p>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/40"
+                className={cn(
+                  "inline-flex h-11 items-center gap-1.5 rounded-full border border-garis-kuat bg-kartu px-4",
+                  "text-bantu font-semibold text-tinta",
+                  "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar",
+                  "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-kartu",
+                )}
               >
-                <ChevronLeft className="h-3.5 w-3.5" /> Sebelumnya
+                <CaretLeft size={16} aria-hidden="true" /> Sebelumnya
               </button>
-              <span className="px-2 text-xs text-slate-400">{page + 1} / {totalPages}</span>
+              <span className="text-bantu text-redup tabular-nums">
+                {page + 1} / {totalPages}
+              </span>
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/40"
+                className={cn(
+                  "inline-flex h-11 items-center gap-1.5 rounded-full border border-garis-kuat bg-kartu px-4",
+                  "text-bantu font-semibold text-tinta",
+                  "transition-colors duration-150 ease-[var(--ease-standar)] hover:bg-latar",
+                  "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-kartu",
+                )}
               >
-                Berikutnya <ChevronRight className="h-3.5 w-3.5" />
+                Berikutnya <CaretRight size={16} aria-hidden="true" />
               </button>
             </div>
           </div>
         )}
       </div>
-    </div>
-  );
-}
 
-function PageEmpty({ hasFilter }: { hasFilter: boolean }) {
-  return (
-    <EmptyState
-      title={hasFilter ? "Tidak ada tiket pada filter ini" : "Belum ada tiket"}
-      subtitle={
-        hasFilter
-          ? "Coba ubah filter grup, status, atau tanggal."
-          : "Tiket akan muncul di sini saat karyawan mengajukan."
-      }
-    />
+      {/* Panel detail — desktop saja, menempel di atas */}
+      <DetailPanel
+        entitas="laporan"
+        item={detail}
+        aksiLabel="Buka laporan"
+        onAksi={terpilih ? () => buka(terpilih) : undefined}
+        className="lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start"
+      />
+    </div>
   );
 }
