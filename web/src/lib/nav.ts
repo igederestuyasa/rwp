@@ -43,6 +43,8 @@ export const NAV: Record<Role, NavConfig> = {
       { href: "/dashboard", label: "Dashboard", icon: SquaresFour },
       { href: "/tiket", label: "Daftar Laporan", icon: ListChecks },
       ASISTEN,
+      // Kelola pengetahuan asisten AI tanpa terminal (admin saja).
+      { href: "/korpus", label: "Korpus AI", icon: BookOpen },
     ],
     bottom: BOTTOM,
   },
