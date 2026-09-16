@@ -129,21 +129,33 @@ node scripts/test-escalation.mjs    # karyawan DITOLAK, superior BERHASIL
 
 ### 5. Menyalakan asisten (RAG)
 
+Pengetahuan asisten dikelola dari **halaman admin `/korpus`** — tanpa terminal:
+
+1. Masuk sebagai admin, buka **Korpus AI** di menu.
+2. Tekan **Kirim ke korpus** pada kebijakan yang sudah terbit — isinya dipelajari
+   asisten langsung dari baris yang sama yang dibaca karyawan di `/kebijakan`.
+3. Unggah dokumen cara-pakai `.md`/`.txt` (yang ikut repo ada di
+   `web/scripts/corpus/`), lalu tekan **Proses**. Progresnya tampil per dokumen.
+4. Hapus atau proses ulang dokumen kapan saja dari panel detailnya.
+
+Semua itu berjalan sebagai admin yang login lewat RLS, bukan `service_role`, jadi
+route API-nya tidak bisa dipakai karyawan meski dipanggil langsung.
+
+**Setelah korpus berubah**, jalankan sekali dari terminal:
+
 ```bash
-cd web
-node scripts/build-corpus.mjs       # susun scripts/docs/ dari sumber di repo
-node scripts/ingest.mjs --clear     # potong → embed → simpan ke rag_chunks
-node scripts/diagnose-retrieval.mjs # ukur sebaran skor
+cd web && node scripts/diagnose-retrieval.mjs   # ukur sebaran skor
 ```
 
-Langkah terakhir **bukan formalitas**: keluarannya merekomendasikan nilai
+Langkah ini **bukan formalitas**: keluarannya merekomendasikan nilai
 `MIN_SIMILARITY` untuk `web/src/app/api/asisten/route.ts`. Ambang yang sekarang
 dikalibrasi untuk korpus lama dan hampir pasti perlu digeser. Jangan pakai angka
-"0.70–0.80" yang beredar umum — di setup ini terbukti salah.
+"0.70–0.80" yang beredar umum — di setup ini terbukti salah. Latar metodenya di
+`docs/embedding.md`.
 
-Menambah dokumen sendiri: taruh `.txt`/`.md` di `web/scripts/docs/` lalu ulangi
-ingest. PDF/DOCX harus dikonversi dulu. Dokumen cara-pakai yang ikut repo ada di
-`web/scripts/corpus/`; dokumen sensitif jangan di-commit.
+Skrip lama `build-corpus.mjs` dan `ingest.mjs --clear` masih ada sebagai cadangan
+dan menghasilkan chunk yang identik dengan jalur UI. PDF belum bisa diunggah ke
+korpus — konversi dulu ke `.md`.
 
 ---
 

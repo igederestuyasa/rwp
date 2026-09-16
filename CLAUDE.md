@@ -90,12 +90,15 @@ berurutan di setiap lingkungan:
    `v_reports_admin`, RPC
 2. `20260101000200_storage_buckets.sql` — bucket `rwp-evidence` & `policy-docs`
    + batas ukuran/MIME
+3. `20260101000300_korpus_admin.sql` — tabel `corpus_documents`, RLS tulis
+   admin pada `rag_chunks`/`policies`/bucket `policy-docs`, backfill dokumen
+   warisan skrip lama
 
 **Seed** (`web/supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
 yang menampung laporan asli:
 
-3. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
-4. `02_policies.sql` — isi halaman Kebijakan
+4. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
+5. `02_policies.sql` — isi halaman Kebijakan
 
 Seluruh migrasi idempotent dan mencatat versinya sendiri ke
 `supabase_migrations.schema_migrations`, tabel yang sama dipakai Supabase CLI.
@@ -103,8 +106,8 @@ Seluruh migrasi idempotent dan mencatat versinya sendiri ke
 mengulanginya, jadi perubahannya tidak akan pernah sampai. Buat berkas baru.
 
 Tabel: `users`, `reports`, `report_evidence`, `report_messages`,
-`report_status_log`, `policies`, `rag_chunks`, `chat_sessions`, `chat_messages`,
-`chat_feedback`.
+`report_status_log`, `policies`, `rag_chunks`, `corpus_documents`, `chat_sessions`,
+`chat_messages`, `chat_feedback`.
 
 RPC: `change_report_status`, `reveal_reporter`, `match_rag_chunks`,
 `get_chat_feedback_summary`.
@@ -134,10 +137,18 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   `report_messages`, atau identitas. Ini aturan keras (§9.3).
 - **Batas topik**: RWP, aplikasi ini, dan Layanan Psikologi. Pertanyaan HC lain
   (cuti, gaji, pelatihan) ditolak dan diarahkan ke tim HC.
-- **Korpus dibangun ulang** dengan `node scripts/build-corpus.mjs` — handbook
-  diambil dari `lib/policies.ts` supaya asisten dan halaman kebijakan tidak
-  bercerita berbeda. Dokumen cara-pakai ada di `scripts/corpus/` (ikut repo);
-  `scripts/docs/` gitignored.
+- **Korpus dikelola dari halaman admin `/korpus`**, bukan terminal. Admin
+  mengunggah `.md`/`.txt` atau menekan "Kirim ke korpus" pada sebuah kebijakan;
+  route `/api/korpus/*` memecah (`lib/chunker.ts`), menyematkan (`embedBatch`),
+  dan menulis `rag_chunks` **sebagai admin yang login** lewat RLS — bukan
+  `service_role`. Ingest berjalan bertahap 40 chunk per panggilan karena batas
+  waktu serverless. Sumber kebenaran handbook adalah **baris tabel `policies`**
+  yang juga dibaca `/kebijakan`, sehingga asisten dan halaman kebijakan tidak
+  bercerita berbeda. `lib/policies.ts` kini hanya data mock dan seed.
+- Skrip lama `scripts/ingest.mjs`, `manage-docs.mjs`, `build-corpus.mjs` masih
+  ada sebagai cadangan selama transisi; `lib/chunker.ts` adalah port 1:1
+  dengan paritas teruji, jadi hasilnya sama. Dokumen cara-pakai di
+  `scripts/corpus/` diunggah lewat UI.
 - **`MIN_SIMILARITY` harus dari data**, bukan dari angka yang beredar umum.
   Jalankan `scripts/diagnose-retrieval.mjs` setiap kali korpus berubah. Nilai
   sekarang masih warisan korpus lama dan perlu disetel ulang. Latar belakang
