@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const inter = Inter({
-  variable: "--font-inter",
+// Satu keluarga huruf untuk seluruh app (docs/DESIGN.md §Tipografi).
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -28,10 +22,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${inter.variable} ${spaceGrotesk.variable} h-full`} suppressHydrationWarning>
+    <html lang="id" className={`${plusJakarta.variable} h-full`} suppressHydrationWarning>
       {/* Anti-flash: terapkan tema SEBELUM render untuk hindari kedip putih → gelap */}
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}catch(e){}})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('rwp_theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.style.colorScheme=t}catch(e){}})();` }} />
       </head>
       <body className="min-h-full font-sans antialiased">
         <Providers>{children}</Providers>

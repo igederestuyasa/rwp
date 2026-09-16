@@ -13,6 +13,7 @@
     "postinstall": "npm run copy-pdf-worker"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.107.0",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",

@@ -36,8 +36,14 @@ function subscribe(onChange: () => void) {
   };
 }
 function getSnapshot(): Theme {
-  // Dark mode sementara dinonaktifkan — selalu light
-  return "light";
+  // Pilihan tersimpan menang; kalau belum pernah dipilih, ikut preferensi sistem.
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    if (t === "dark" || t === "light") return t;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch {
+    return "light";
+  }
 }
 function getServerSnapshot(): Theme {
   return "light"; // cocok dengan default anti-flash di layout.tsx
