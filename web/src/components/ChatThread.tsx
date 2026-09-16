@@ -1,7 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, type FormEvent } from "react";
-import { Send, Paperclip, X } from "lucide-react";
+import {
+  PaperPlaneTilt,
+  Paperclip,
+  X,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import { getEvidenceUrl } from "@/lib/storage";
@@ -9,6 +14,8 @@ import { validateFiles, formatRejections, ACCEPT_ATTR } from "@/lib/fileValidati
 import { formatDateTime } from "@/lib/utils";
 import type { EvidenceFile } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 export function ChatThread({ reportId }: { reportId: string }) {
   const { user } = useAuth();
@@ -58,11 +65,9 @@ export function ChatThread({ reportId }: { reportId: string }) {
   return (
     <div>
       {/* Thread */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {thread.length === 0 && (
-          <p className="py-4 text-center text-sm text-slate-400">
-            Belum ada percakapan.
-          </p>
+          <p className="py-4 text-center text-bantu text-redup">Belum ada percakapan.</p>
         )}
         {thread.map((m) => {
           const isAdmin = m.senderRole === "admin";
@@ -71,36 +76,47 @@ export function ChatThread({ reportId }: { reportId: string }) {
             <div key={m.id} className={mine ? "flex justify-end" : "flex justify-start"}>
               <div className="max-w-[78%]">
                 <div
-                  className={
+                  className={cn(
+                    "rounded-[var(--radius-kartu)] px-3.5 py-2.5 text-bantu leading-relaxed",
                     mine
-                      ? "rounded-2xl rounded-tr-sm bg-blue-600 px-3.5 py-2 text-sm text-white"
-                      : "rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2 text-sm text-slate-700 dark:bg-slate-700 dark:text-slate-200"
-                  }
+                      ? "bg-tinta text-kartu"
+                      : "border border-garis bg-latar text-tinta",
+                  )}
                 >
                   {/* Teks pesan */}
-                  {m.message && <p>{m.message}</p>}
+                  {m.message && <p className="break-words">{m.message}</p>}
 
                   {/* Lampiran */}
                   {m.attachments && m.attachments.length > 0 && (
-                    <div className={`${m.message ? "mt-2 pt-2 border-t" : ""} ${mine ? "border-blue-500" : "border-slate-200"} space-y-1`}>
+                    <div
+                      className={cn(
+                        "space-y-1.5",
+                        m.message && "mt-2.5 border-t pt-2.5",
+                        mine ? "border-kartu/30" : "border-garis",
+                      )}
+                    >
                       {m.attachments.map((f, i) => (
                         <button
                           key={i}
                           type="button"
                           onClick={() => openAttachment(f)}
                           disabled={!f.path}
-                          className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-xs ${f.path ? "cursor-pointer" : "cursor-default"} ${
-                            mine ? "bg-blue-500/50 text-blue-100 enabled:hover:bg-blue-500/70" : "bg-slate-200/60 text-slate-600 enabled:hover:bg-slate-200 dark:bg-slate-600/60 dark:text-slate-300"
-                          }`}
+                          className={cn(
+                            "flex w-full items-center gap-1.5 rounded-[var(--radius-input)] border px-2 py-1.5 text-mikro transition-colors duration-150",
+                            f.path ? "cursor-pointer" : "cursor-default",
+                            mine
+                              ? "border-kartu/30 text-kartu enabled:hover:bg-kartu/10"
+                              : "border-garis bg-kartu text-tinta enabled:hover:bg-latar",
+                          )}
                         >
-                          <Paperclip className="h-3 w-3 shrink-0" />
+                          <Paperclip size={14} className="shrink-0" aria-hidden />
                           <span className="truncate">{f.name}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-                <div className={`mt-1 text-xs text-slate-400 dark:text-slate-500 ${mine ? "text-right" : ""}`}>
+                <div className={cn("mt-1.5 text-mikro text-redup", mine && "text-right")}>
                   {isAdmin ? "Admin HC" : "Pelapor"} · {formatDateTime(m.createdAt)}
                 </div>
               </div>
@@ -110,23 +126,24 @@ export function ChatThread({ reportId }: { reportId: string }) {
       </div>
 
       {/* Input */}
-      <form onSubmit={onSubmit} className="mt-4 space-y-2">
+      <form onSubmit={onSubmit} className="mt-6 space-y-3">
         {/* Preview file sebelum kirim */}
         {files.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {files.map((f, i) => (
               <div
                 key={i}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                className="flex items-center gap-1.5 rounded-[var(--radius-input)] border border-garis bg-latar px-2.5 py-1.5 text-mikro text-tinta"
               >
-                <Paperclip className="h-3 w-3 shrink-0 text-slate-400" />
+                <Paperclip size={14} className="shrink-0 text-redup" aria-hidden />
                 <span className="max-w-[140px] truncate">{f.name}</span>
                 <button
                   type="button"
                   onClick={() => removeFile(i)}
-                  className="text-slate-400 hover:text-rose-500"
+                  aria-label={`Hapus lampiran ${f.name}`}
+                  className="text-redup transition-colors duration-150 hover:text-merah"
                 >
-                  <X className="h-3 w-3" />
+                  <X size={14} aria-hidden />
                 </button>
               </div>
             ))}
@@ -134,7 +151,10 @@ export function ChatThread({ reportId }: { reportId: string }) {
         )}
 
         {fileError && (
-          <p className="text-xs text-rose-600 dark:text-rose-400">{fileError}</p>
+          <p className="flex items-start gap-1.5 text-bantu text-merah">
+            <WarningCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
+            {fileError}
+          </p>
         )}
 
         <div className="flex items-center gap-2">
@@ -143,9 +163,10 @@ export function ChatThread({ reportId }: { reportId: string }) {
             type="button"
             onClick={() => fileRef.current?.click()}
             title="Lampirkan file"
-            className="shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+            aria-label="Lampirkan file"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-garis-kuat bg-kartu text-redup transition-colors duration-150 hover:bg-latar hover:text-tinta"
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip size={18} aria-hidden />
           </button>
           <input
             ref={fileRef}
@@ -156,14 +177,20 @@ export function ChatThread({ reportId }: { reportId: string }) {
             onChange={onFiles}
           />
 
-          <input
+          <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
+            aria-label={myRole === "admin" ? "Balas pelapor" : "Tulis pesan untuk Admin HC"}
             placeholder={myRole === "admin" ? "Balas pelapor…" : "Tulis pesan untuk Admin HC…"}
-            className="flex-1 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:ring-blue-900/30"
+            className="flex-1"
           />
-          <Button type="submit" size="sm" disabled={!canSend} className="shrink-0">
-            <Send className="h-4 w-4" />
+          <Button
+            type="submit"
+            disabled={!canSend}
+            aria-label="Kirim pesan"
+            className="h-11 w-11 shrink-0 p-0"
+          >
+            <PaperPlaneTilt size={18} aria-hidden />
           </Button>
         </div>
       </form>

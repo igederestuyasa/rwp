@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Paperclip, Download, Loader2 } from "lucide-react";
+import { Paperclip, DownloadSimple, CircleNotch } from "@phosphor-icons/react";
 import { getEvidenceUrl } from "@/lib/storage";
 import type { EvidenceFile } from "@/lib/types";
 
@@ -18,22 +18,27 @@ export function EvidenceList({ files }: { files: EvidenceFile[] }) {
   }
 
   return (
-    <ul className="space-y-1.5">
+    <ul className="space-y-2">
       {files.map((f, i) => (
         <li key={i}>
           <button
             type="button"
             onClick={() => open(f, i)}
             disabled={!f.path || loading === i}
-            className="flex w-full items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-100 transition-colors enabled:hover:bg-slate-100 disabled:cursor-default dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600 dark:enabled:hover:bg-slate-600"
+            className="flex w-full items-center gap-2 rounded-[var(--radius-input)] border border-garis bg-kartu px-3 py-2.5 text-left text-bantu text-tinta transition-colors duration-150 enabled:hover:bg-latar disabled:cursor-default"
           >
-            <Paperclip className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+            <Paperclip size={16} className="shrink-0 text-redup" aria-hidden />
             <span className="truncate">{f.name}</span>
-            {f.path && (
-              loading === i
-                ? <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-slate-400" />
-                : <Download className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
-            )}
+            {f.path &&
+              (loading === i ? (
+                <CircleNotch
+                  size={16}
+                  className="ml-auto shrink-0 animate-spin text-redup"
+                  aria-hidden
+                />
+              ) : (
+                <DownloadSimple size={16} className="ml-auto shrink-0 text-redup" aria-hidden />
+              ))}
           </button>
         </li>
       ))}
