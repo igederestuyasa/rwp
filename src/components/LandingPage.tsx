@@ -19,52 +19,52 @@ const JAMINAN = [
   {
     icon: EyeSlash,
     title: "Bisa melapor anonim",
-    desc: "Kamu memilih sendiri apakah namamu ikut terkirim. Kalau anonim, identitasmu tidak ditampilkan kepada admin.",
+    desc: "Anda yang menentukan apakah nama ikut disertakan. Bila anonim, admin tidak melihat identitas Anda.",
   },
   {
     icon: Lock,
     title: "Identitas disimpan terpisah",
-    desc: "Nama pelapor tidak menempel pada isi laporan. Admin membaca laporannya, bukan siapa yang menulisnya.",
+    desc: "Nama pelapor tidak menempel pada isi laporan. Admin membaca laporannya, bukan siapa penulisnya.",
   },
   {
     icon: FileMagnifyingGlass,
     title: "Pembukaan identitas tercatat",
-    desc: "Bila penanganan menuntutnya, identitas hanya bisa dibuka admin berwenang — dan kamu melihat catatannya di riwayat laporanmu.",
+    desc: "Hanya admin berwenang yang dapat membukanya, dan catatannya tampil di riwayat laporan Anda.",
   },
 ];
 
 const LANGKAH = [
-  { n: "01", title: "Tulis laporanmu", desc: "Pilih kategori insiden, ceritakan kronologinya, lampirkan bukti bila ada." },
-  { n: "02", title: "Terima nomor tiket", desc: "Nomor ini kuncimu untuk memantau penanganan, bahkan bila kamu melapor anonim." },
-  { n: "03", title: "Ditinjau tim HC", desc: "Status berubah dari Diterima → Sedang Ditinjau → Tindak Lanjut, semuanya terlihat olehmu." },
-  { n: "04", title: "Tetap terhubung", desc: "Balas pertanyaan admin lewat kolom percakapan di dalam laporan, tanpa membuka identitas." },
+  { n: "01", title: "Tulis laporan", desc: "Pilih kategori insiden, ceritakan kronologinya, lampirkan bukti bila ada." },
+  { n: "02", title: "Terima nomor tiket", desc: "Nomor ini kunci Anda untuk memantau penanganan, termasuk saat melapor anonim." },
+  { n: "03", title: "Ditinjau tim HC", desc: "Status berjalan dari Diterima, Sedang Ditinjau, hingga Tindak Lanjut, dan Anda bisa memantaunya." },
+  { n: "04", title: "Tetap terhubung", desc: "Balas pertanyaan admin lewat percakapan di dalam laporan, tanpa membuka identitas." },
 ];
 
 // Ikon pintu datang dari GenerativeIcon di dalam ItemCard (§Batas gaya),
 // jadi entri di sini cukup nama + keterangan.
 const PINTU = [
-  { title: "Kebijakan RWP", desc: "Handbook lengkap: definisi, kategori pelanggaran, contoh kasus nyata, dan sanksinya." },
+  { title: "Kebijakan RWP", desc: "Handbook lengkap: definisi, kategori pelanggaran, contoh kasus, dan sanksinya." },
   { title: "Pelaporan insiden", desc: "Kanal resmi untuk pelecehan, diskriminasi, perundungan, kekerasan, bias gender, dan eksklusivitas." },
   { title: "Pelacakan laporan", desc: "Pantau status penanganan dan berkomunikasi dengan admin RWP." },
-  { title: "Layanan psikologi", desc: "Careline 24/7, psikolog internal, dan platform wellness — terpisah dari sistem pelaporan." },
+  { title: "Layanan psikologi", desc: "Careline 24 jam, psikolog internal, dan platform kesejahteraan, terpisah dari sistem pelaporan." },
 ];
 
 const FAQ = [
   {
     q: "Apakah benar-benar tidak ada yang tahu siapa saya?",
-    a: "Anonimitas di sini bersifat prosedural, bukan teknis absolut — dan kami memilih jujur soal itu. Sistem tetap menyimpan kaitan ke akunmu untuk mencegah penyalahgunaan dan agar tindak lanjut mungkin dilakukan. Yang dijamin: identitasmu tidak ditampilkan kepada admin, dan pembukaannya hanya bisa dilakukan admin berwenang serta selalu tercatat di riwayat laporanmu.",
+    a: "Anonimitas di sini bersifat prosedural, dan kami memilih terbuka soal itu. Sistem menyimpan kaitan ke akun Anda untuk mencegah penyalahgunaan dan agar tindak lanjut tetap mungkin. Yang kami jamin: identitas Anda tidak ditampilkan kepada admin, dan pembukaannya hanya oleh admin berwenang serta selalu tercatat di riwayat laporan Anda.",
   },
   {
     q: "Bagaimana kalau saya belum yakin ini termasuk pelanggaran?",
-    a: `Tanya dulu ke ${ASSISTANT_NAME}. Asisten menjawab berdasarkan handbook RWP resmi, termasuk contoh kasus nyata, sehingga kamu bisa menimbang tanpa harus melapor lebih dulu.`,
+    a: `Tanyakan lebih dulu kepada ${ASSISTANT_NAME}. Jawabannya merujuk handbook RWP resmi beserta contoh kasus nyata, jadi Anda bisa menimbang tanpa harus melapor terlebih dahulu.`,
   },
   {
-    q: "Saya butuh dukungan, tapi belum siap melapor.",
-    a: "Buka Layanan Psikologi. Careline 24/7, psikolog internal, dan platform Naluri bisa dihubungi langsung. Kanal-kanal itu terpisah dari sistem pelaporan dan tidak otomatis membuat laporan.",
+    q: "Saya butuh dukungan, tetapi belum siap melapor.",
+    a: "Buka Layanan Psikologi. Careline 24 jam, psikolog internal, dan platform Naluri bisa dihubungi langsung. Kanal ini terpisah dari sistem pelaporan dan tidak otomatis membuat laporan.",
   },
   {
     q: "Apakah pelapor bisa dibalas atau dirugikan?",
-    a: "Tidak boleh. Perusahaan melarang segala bentuk pembalasan terhadap pelapor yang beritikad baik. Bila kamu mengalaminya, itu sendiri merupakan pelanggaran yang bisa dilaporkan.",
+    a: "Tidak boleh. Perusahaan melarang segala bentuk pembalasan terhadap pelapor yang beritikad baik. Bila Anda mengalaminya, hal itu sendiri merupakan pelanggaran yang dapat dilaporkan.",
   },
 ];
 
@@ -127,8 +127,8 @@ export function LandingPage() {
             style={{ animationDelay: "110ms" }}
           >
             Kanal resmi {ORG_NAME} untuk melaporkan pelecehan, diskriminasi,
-            perundungan, dan kekerasan di tempat kerja. Kerahasiaan dijaga sejak
-            laporan ditulis sampai penanganannya selesai.
+            perundungan, dan kekerasan di tempat kerja. Kerahasiaan Anda kami
+            jaga sejak awal.
           </p>
 
           <div
@@ -146,7 +146,7 @@ export function LandingPage() {
               href="#cara-kerja"
               className="inline-flex h-12 items-center justify-center rounded-full border border-garis-kuat bg-kartu px-6 text-isi font-semibold text-tinta transition-colors duration-150 hover:bg-latar"
             >
-              Pelajari alurnya
+              Lihat cara kerjanya
             </a>
           </div>
         </section>
@@ -154,8 +154,8 @@ export function LandingPage() {
         {/* ── Jaminan privasi ── */}
         <section className="mt-16">
           <JudulBagian
-            judul="Yang bikin kanal ini beda"
-            keterangan="Alasan orang urung melapor hampir selalu sama: takut ketahuan. Tiga hal berikut dibangun ke dalam sistem, bukan sekadar dijanjikan."
+            judul="Yang membuat kanal ini berbeda"
+            keterangan="Banyak orang urung melapor karena takut diketahui. Tiga hal ini dibangun ke dalam sistem, bukan sekadar dijanjikan."
           />
           <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
             {JAMINAN.map(({ icon: Icon, title, desc }) => (
@@ -197,8 +197,8 @@ export function LandingPage() {
         {/* ── Pintu masuk aplikasi ── */}
         <section className="mt-16">
           <JudulBagian
-            judul="Bukan cuma kotak pengaduan"
-            keterangan="Empat pintu di dalam aplikasi. Masuk dengan akun karyawan untuk membukanya."
+            judul="Lebih dari kotak pengaduan"
+            keterangan="Empat layanan dalam satu aplikasi. Masuk dengan akun karyawan untuk membukanya."
           />
           <ItemCardGrid className="mt-6">
             {PINTU.map(({ title, desc }, i) => (
@@ -228,10 +228,10 @@ export function LandingPage() {
             </div>
           </div>
           <p className="mt-5 max-w-[62ch] text-isi leading-[1.5] text-redup">
-            Ragu apakah yang kamu alami termasuk pelanggaran? Tanya lebih dulu.
-            Jawabannya disusun dari handbook RWP resmi perusahaan — termasuk contoh
-            kasus nyata — dan bila informasinya tidak ada di dokumen, asisten akan
-            bilang tidak tahu, bukan mengarang.
+            Belum yakin apakah yang Anda alami termasuk pelanggaran? Tanyakan
+            lebih dulu. Jawabannya disusun dari handbook RWP resmi, termasuk contoh
+            kasus nyata. Bila informasinya tidak ada, asisten akan mengatakannya,
+            bukan mengarang.
           </p>
           <p className="mt-4 max-w-[62ch] text-bantu leading-[1.5] text-redup">
             Asisten membantu menjelaskan kebijakan. Penilaian dan tindak lanjut resmi
@@ -260,17 +260,17 @@ export function LandingPage() {
         {/* ── Ajakan penutup ── */}
         <section className="mt-16 rounded-[var(--radius-panel)] border border-garis bg-kartu p-8 text-center lg:p-12">
           <h2 className="text-bagian font-bold leading-[1.25] tracking-[-0.02em] text-balance text-tinta">
-            Kamu tidak harus menghadapinya sendirian
+            Anda tidak harus menghadapinya sendirian.
           </h2>
           <p className="mx-auto mt-3 max-w-[52ch] text-bantu leading-[1.6] text-redup">
-            Melapor bukan berarti mencari masalah. Melapor berarti memberi kesempatan
-            perusahaan untuk memperbaikinya.
+            Melapor bukan berarti mencari masalah. Melapor berarti memberi perusahaan
+            kesempatan untuk memperbaikinya.
           </p>
           <Link
             href="/login"
             className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-tinta px-6 text-isi font-semibold text-kartu transition-colors duration-150 hover:bg-tinta-hover"
           >
-            Masuk ke {APP_NAME}
+            Masuk untuk melapor
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </section>
