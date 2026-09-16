@@ -98,7 +98,7 @@ function PsikologiIsi({ onBack }: { onBack?: () => void }) {
       <div style={{ gridArea: "konten" }} className="mt-12 lg:mt-0">
         {/* Catatan privasi — teks sengaja dipertahankan apa adanya */}
         {/* Blok menyambut: boleh memakai token hangat (§Token warna). */}
-        <div className="flex items-start gap-3 rounded-[var(--radius-kartu)] border border-garis bg-hangat-latar px-4 py-3.5">
+        <div className="flex items-start gap-3 rounded-[var(--radius-kartu)] border border-hangat-garis bg-hangat-latar px-4 py-3.5">
           <ShieldCheck
             size={20}
             weight="regular"

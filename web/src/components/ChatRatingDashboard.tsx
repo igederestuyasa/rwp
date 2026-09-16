@@ -261,14 +261,10 @@ export function ChatRatingDashboard() {
                       cursor={{ fill: tooltip.cursorFill }}
                       formatter={(v) => [v, "Ulasan"]}
                     />
-                    {/* Satu warna (tinta), makin banyak bintang makin pekat. */}
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48} fill={palet.tinta}>
-                      {distribution.map((d) => (
-                        <Cell
-                          key={d.stars}
-                          fill={palet.tinta}
-                          fillOpacity={0.4 + d.stars * 0.12}
-                        />
+                    {/* Ramp data hangat — satu keluarga warna per jumlah bintang. */}
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48} fill={palet.data[0]}>
+                      {distribution.map((d, i) => (
+                        <Cell key={d.stars} fill={palet.data[i % palet.data.length]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -313,9 +309,9 @@ export function ChatRatingDashboard() {
                     <Line
                       type="monotone"
                       dataKey="avg"
-                      stroke={palet.merah}
+                      stroke={palet.data[2]}
                       strokeWidth={2}
-                      dot={{ r: 3, fill: palet.merah, strokeWidth: 0 }}
+                      dot={{ r: 3, fill: palet.data[2], strokeWidth: 0 }}
                       connectNulls
                     />
                   </LineChart>

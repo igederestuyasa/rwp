@@ -42,6 +42,9 @@ export interface PaletChart {
   kartu: string;
   latar: string;
   merah: string;
+  hangat: string;
+  /** Ramp data hangat (koral, persik, mawar, tanah, plum) — satu keluarga. */
+  data: string[];
 }
 
 /**
@@ -60,6 +63,14 @@ export function usePaletChart(): PaletChart {
       kartu: tokenWarna("--color-kartu"),
       latar: tokenWarna("--color-latar"),
       merah: tokenWarna("--color-merah"),
+      hangat: tokenWarna("--color-hangat"),
+      data: [
+        tokenWarna("--color-data-1"),
+        tokenWarna("--color-data-2"),
+        tokenWarna("--color-data-3"),
+        tokenWarna("--color-data-4"),
+        tokenWarna("--color-data-5"),
+      ],
     };
   }, [theme]);
 }
@@ -285,8 +296,8 @@ export function RwpDashboard() {
               <AreaChart data={trend}>
                 <defs>
                   <linearGradient id="rwpTrend" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={palet.merah} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={palet.merah} stopOpacity={0} />
+                    <stop offset="5%"  stopColor={palet.data[0]} stopOpacity={0.22} />
+                    <stop offset="95%" stopColor={palet.data[0]} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={palet.garis} vertical={false} />
@@ -300,9 +311,9 @@ export function RwpDashboard() {
                 />
                 <Area
                   type="monotone" dataKey="value" name="Laporan"
-                  stroke={palet.merah} strokeWidth={2}
+                  stroke={palet.data[0]} strokeWidth={2}
                   fill="url(#rwpTrend)" dot={false}
-                  activeDot={{ r: 4, fill: palet.merah, stroke: palet.kartu, strokeWidth: 2 }}
+                  activeDot={{ r: 4, fill: palet.data[0], stroke: palet.kartu, strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -340,14 +351,10 @@ export function RwpDashboard() {
                     itemStyle={tooltip.itemStyle}
                     cursor={{ fill: tooltip.cursorFill }}
                   />
-                  {/* Satu warna (tinta) dengan gradasi opasitas — bukan palet pelangi. */}
-                  <Bar dataKey="value" name="Laporan" radius={[0, 4, 4, 0]} fill={palet.tinta}>
+                  {/* Ramp data hangat — satu keluarga warna, bukan pelangi. */}
+                  <Bar dataKey="value" name="Laporan" radius={[0, 4, 4, 0]} fill={palet.data[0]}>
                     {byKategori.map((d, i) => (
-                      <Cell
-                        key={d.name}
-                        fill={palet.tinta}
-                        fillOpacity={Math.max(0.4, 1 - i * 0.1)}
-                      />
+                      <Cell key={d.name} fill={palet.data[i % palet.data.length]} />
                     ))}
                   </Bar>
                 </BarChart>
