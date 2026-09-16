@@ -113,8 +113,16 @@ export default function LoginPage() {
         {/* ── Tampilan: masuk ── */}
         {view === "login" && (
           <div className="animate-in">
+            {/* Sapaan hangat: halaman masuk adalah pintu pertama kanal
+                pelaporan, jadi sengaja tidak terasa klinis (§Token warna). */}
+            <p
+              className="pembuka-masuk mt-8 text-isi font-medium text-hangat"
+              style={{ animationDelay: "40ms" }}
+            >
+              Selamat datang
+            </p>
             <h1
-              className="pembuka-masuk mt-8 text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta"
+              className="pembuka-masuk mt-2 text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta"
               style={{ animationDelay: "60ms" }}
             >
               Masuk ke akun

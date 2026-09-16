@@ -2,7 +2,10 @@
 
 ## Prinsip
 - Satu elevasi: hanya kontrol utama layar (biasanya kolom cari) yang diberi bayangan.
-- Netral dengan satu aksen: semua warna abu-abu netral, merah HK sebagai aksen merek.
+- Netral hangat dengan satu aksen merek: seluruh ramp netral bersuhu hangat (pasir),
+  merah HK tetap satu-satunya aksen merek. Aplikasi ini kanal pelaporan insiden, jadi
+  permukaannya harus terasa menerima, bukan klinis — kehangatan datang dari netralnya,
+  bukan dari menambah warna aksen kedua.
 - Daftar-detail: daftar di kiri, panel detail menempel di kanan (desktop).
 - Putus-putus berarti belum tersedia.
 - Gerak menjelaskan perubahan: animasi hanya untuk muat halaman, pergantian panel, dan umpan balik hover.
@@ -10,19 +13,31 @@
 ## Token warna
 | Token | Terang | Gelap | Dipakai untuk |
 |---|---|---|---|
-| latar | #F3F4F6 | #0D0F12 | kanvas halaman, hover baris |
-| kartu | #FDFDFD | #15181D | kartu, panel, input |
-| tinta | #121418 | #E9ECF0 | teks utama, tombol utama, cincin fokus |
-| tinta-hover | #2B2F37 | #F7F8FA | hover tombol utama |
-| redup | #5D636E | #9AA1AB | teks pendukung |
-| garis | #E0E3E8 | #252A31 | border kartu, pemisah |
-| garis-kuat | #C6CBD3 | #3A414B | border input |
-| garis-putus | #BCC2CB | #3E4550 | item belum tersedia |
+| latar | #F5F1EC | #12100E | kanvas halaman, hover baris |
+| kartu | #FFFCF9 | #1B1815 | kartu, panel, input |
+| tinta | #1F1A16 | #EFEAE3 | teks utama, tombol utama, cincin fokus |
+| tinta-hover | #3B322B | #FAF7F3 | hover tombol utama |
+| redup | #6E635A | #A79C92 | teks pendukung |
+| garis | #E6DED4 | #2A2521 | border kartu, pemisah |
+| garis-kuat | #CDC2B5 | #423A33 | border input |
+| garis-putus | #C0B4A6 | #4A4139 | item belum tersedia |
 | merah | #C41115 | #F0484E | aksen merek, panah hover, caret, pesan error |
 | merah-ikon | #DD2A30 | #F0484E | aksen di ikon generatif dan logo |
-| merah-latar | #FBE3E3 | rgb(240 72 78 / .24) | sorotan kata hasil cari |
-| sukses | #1E7A4C | #4CC38A | status data, selalu bersama teks atau ikon |
+| merah-latar | #FCE8E1 | rgb(240 72 78 / .24) | sorotan kata hasil cari |
+| hangat | #AA4D08 | #E9A05C | permukaan yang menyambut: sapaan, ajakan, kanal bantuan |
+| hangat-latar | #FBF0E2 | rgb(233 160 92 / .16) | latar lembut untuk blok menyambut |
+| sukses | #2F6F4A | #5CC08A | status data, selalu bersama teks atau ikon |
 | peringatan | #8A5A00 | #E0A33B | status data, selalu bersama teks atau ikon |
+
+Seluruh netral bersuhu hangat (pasir), bukan abu-abu kebiruan. Ini keputusan sadar:
+kanal pelaporan insiden dipakai orang yang sedang tidak nyaman, dan permukaan yang
+dingin membuatnya terasa seperti sistem tiket IT. Semua pasangan teks dan latar di
+tabel ini sudah diuji dan lulus kontras minimal 4.5:1 di kedua mode.
+
+`hangat` BUKAN aksen kedua untuk dekorasi. Pemakaiannya dibatasi pada permukaan yang
+sifatnya menyambut atau menenangkan: sapaan di beranda, pembuka halaman masuk, panel
+Layanan Psikologi, dan keadaan kosong yang mengajak bertindak. Ikon generatif, logo,
+tombol utama, dan status data TIDAK memakainya.
 
 Bayangan kontrol utama: terang `0 1px 2px rgb(18 20 24/.05), 0 12px 28px -16px rgb(18 20 24/.28)`; gelap `0 1px 2px rgb(0 0 0/.4), 0 12px 28px -16px rgb(0 0 0/.9)`. Tooltip dan popover: `0 14px 34px -14px rgb(18 20 24/.35)`.
 
@@ -186,14 +201,16 @@ Aturan render (viewBox `0 0 48 48`, `aria-hidden`):
 - Keadaan kosong ditulis sebagai ajakan beserta langkah berikutnya.
 
 ## Batas gaya
-- Permukaan datar dengan warna solid.
-- Satu warna aksen (merah HK). Warna sukses dan peringatan hanya untuk status data.
+- Permukaan datar dengan warna solid, bersuhu hangat.
+- Satu warna aksen merek (merah HK). Warna sukses dan peringatan hanya untuk status data.
+- `hangat` hanya untuk permukaan menyambut yang disebut di §Token warna, bukan dekorasi bebas.
 - Status ditunjukkan dengan label teks.
 - Keterangan judul selalu di bawah judul.
 - Ikon hanya dari Phosphor, GenerativeIcon, dan logo.
 
 ## Checklist selesai
 - [ ] Semua warna, ukuran huruf, spasi, radius, dan bayangan berasal dari token.
+- [ ] Netral bersuhu hangat, dan `hangat` tidak dipakai di luar permukaan menyambut.
 - [ ] Setiap layar punya tepat satu elemen berbayangan.
 - [ ] h1 maksimal 2 baris, dan pembuka maksimal 4 elemen teks.
 - [ ] Layar daftar entitas memakai pola daftar-detail dan tetap berfungsi di HP.

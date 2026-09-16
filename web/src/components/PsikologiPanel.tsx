@@ -97,12 +97,13 @@ function PsikologiIsi({ onBack }: { onBack?: () => void }) {
       {/* Konten: catatan privasi lalu daftar kanal */}
       <div style={{ gridArea: "konten" }} className="mt-12 lg:mt-0">
         {/* Catatan privasi — teks sengaja dipertahankan apa adanya */}
-        <div className="flex items-start gap-3 rounded-[var(--radius-kartu)] border border-garis bg-latar px-4 py-3.5">
+        {/* Blok menyambut: boleh memakai token hangat (§Token warna). */}
+        <div className="flex items-start gap-3 rounded-[var(--radius-kartu)] border border-garis bg-hangat-latar px-4 py-3.5">
           <ShieldCheck
             size={20}
             weight="regular"
             aria-hidden="true"
-            className="mt-0.5 shrink-0 text-redup"
+            className="mt-0.5 shrink-0 text-hangat"
           />
           <p className="text-bantu leading-[1.5] text-tinta">
             Kanal-kanal ini <span className="font-semibold">terpisah dari sistem pelaporan</span>.

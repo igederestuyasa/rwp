@@ -4,6 +4,7 @@
 
 /* ============================================================
    Token sistem UI "HC Panel" — acuan tunggal: docs/DESIGN.md
+   Ramp netral bersuhu HANGAT (pasir), bukan abu-abu kebiruan.
    ------------------------------------------------------------
    Nama token memakai istilah spesifikasi (latar, kartu, tinta,
    redup, garis, merah). Nama token LAMA (canvas/surface/ink/
@@ -17,18 +18,21 @@
   --font-display: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
 
   /* ── Warna HC Panel (mode terang) ── */
-  --color-latar: #F3F4F6;
-  --color-kartu: #FDFDFD;
-  --color-tinta: #121418;
-  --color-tinta-hover: #2B2F37;
-  --color-redup: #5D636E;
-  --color-garis: #E0E3E8;
-  --color-garis-kuat: #C6CBD3;
-  --color-garis-putus: #BCC2CB;
+  --color-latar: #F5F1EC;
+  --color-kartu: #FFFCF9;
+  --color-tinta: #1F1A16;
+  --color-tinta-hover: #3B322B;
+  --color-redup: #6E635A;
+  --color-garis: #E6DED4;
+  --color-garis-kuat: #CDC2B5;
+  --color-garis-putus: #C0B4A6;
   --color-merah: #C41115;
   --color-merah-ikon: #DD2A30;
-  --color-merah-latar: #FBE3E3;
-  --color-sukses: #1E7A4C;
+  --color-merah-latar: #FCE8E1;
+  /* Permukaan menyambut saja (§Token warna) — bukan aksen kedua untuk dekorasi. */
+  --color-hangat: #AA4D08;
+  --color-hangat-latar: #FBF0E2;
+  --color-sukses: #2F6F4A;
   --color-peringatan: #8A5A00;
 
   /* ── Alias nama lama → nilai HC Panel ── */
@@ -53,10 +57,10 @@
 
   /* ── Bayangan ── */
   /* Hanya kontrol utama layar yang boleh memakai shadow-kontrol. */
-  --shadow-kontrol: 0 1px 2px rgb(18 20 24 / .05), 0 12px 28px -16px rgb(18 20 24 / .28);
-  --shadow-popover: 0 14px 34px -14px rgb(18 20 24 / .35);
-  --shadow-xs: 0 1px 2px rgb(18 20 24 / .05);
-  --shadow-sm: 0 1px 2px rgb(18 20 24 / .05);
+  --shadow-kontrol: 0 1px 2px rgb(31 26 22 / .06), 0 12px 28px -16px rgb(31 26 22 / .30);
+  --shadow-popover: 0 14px 34px -14px rgb(31 26 22 / .35);
+  --shadow-xs: 0 1px 2px rgb(31 26 22 / .06);
+  --shadow-sm: 0 1px 2px rgb(31 26 22 / .06);
   --shadow-md: var(--shadow-kontrol);
   --shadow-lg: var(--shadow-popover);
 
@@ -77,18 +81,20 @@
 
 /* ── Mode gelap: kelas .dark di <html>, dikelola lib/theme.tsx ── */
 .dark {
-  --color-latar: #0D0F12;
-  --color-kartu: #15181D;
-  --color-tinta: #E9ECF0;
-  --color-tinta-hover: #F7F8FA;
-  --color-redup: #9AA1AB;
-  --color-garis: #252A31;
-  --color-garis-kuat: #3A414B;
-  --color-garis-putus: #3E4550;
+  --color-latar: #12100E;
+  --color-kartu: #1B1815;
+  --color-tinta: #EFEAE3;
+  --color-tinta-hover: #FAF7F3;
+  --color-redup: #A79C92;
+  --color-garis: #2A2521;
+  --color-garis-kuat: #423A33;
+  --color-garis-putus: #4A4139;
   --color-merah: #F0484E;
   --color-merah-ikon: #F0484E;
   --color-merah-latar: rgb(240 72 78 / .24);
-  --color-sukses: #4CC38A;
+  --color-hangat: #E9A05C;
+  --color-hangat-latar: rgb(233 160 92 / .16);
+  --color-sukses: #5CC08A;
   --color-peringatan: #E0A33B;
 
   --shadow-kontrol: 0 1px 2px rgb(0 0 0 / .4), 0 12px 28px -16px rgb(0 0 0 / .9);

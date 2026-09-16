@@ -52,7 +52,7 @@ export default function BerandaPage() {
       {/* ── Pembuka layar ── */}
       {firstName && (
         <p
-          className="pembuka-masuk text-isi font-medium text-redup"
+          className="pembuka-masuk text-isi font-medium text-hangat"
           style={{ animationDelay: "0ms" }}
         >
           Halo, {firstName}
