@@ -131,6 +131,7 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
 
 ## 4. Desain UI
 
+- UI: semua perubahan tampilan mengikuti docs/DESIGN.md (sistem HC Panel).
 - Bahasa UI: **Bahasa Indonesia**, seluruhnya.
 - Token tema di `src/app/globals.css` (`--color-surface`, `--color-ink`,
   `--color-line`, `--color-accent`, …). Pakai kelas token (`bg-surface`,
