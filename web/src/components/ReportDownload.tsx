@@ -8,11 +8,12 @@
 // ============================================================
 
 import { useState } from "react";
-import { FileDown, FileSpreadsheet, FileText, Loader2, CalendarRange } from "lucide-react";
+import { CalendarBlank, CircleNotch, FileArrowDown, FilePdf, FileXls } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { APP_NAME, STATUSES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 import type { Report, Status } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Field, GlassSelect } from "@/components/ui/Field";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -305,6 +306,11 @@ async function downloadExcel(
 
 // ── Komponen utama ────────────────────────────────────────────
 
+// Opsi dropdown HC Panel — GlassSelect memakai nilai string, jadi angka bulan
+// dan tahun dikonversi bolak-balik. Data yang dipakai tetap angka.
+const OPSI_BULAN = MONTHS.map((m, i) => ({ value: String(i + 1), label: m }));
+const OPSI_TAHUN = YEARS.map((y) => ({ value: String(y), label: String(y) }));
+
 export function ReportDownload() {
   const { reports } = useStore();
 
@@ -345,137 +351,111 @@ export function ReportDownload() {
     }
   }
 
-  const selectCls = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200";
-
   return (
-    <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-      {/* Header card */}
-      <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-4 dark:border-slate-700/60">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#5B5BD6] to-[#9B5BD6] text-white shadow-sm">
-          <FileDown className="h-4 w-4" />
-        </div>
+    <section className="rounded-[var(--radius-panel)] border border-garis bg-kartu p-5 sm:p-6">
+      {/* Kepala panel */}
+      <div className="flex items-start gap-3">
+        <FileArrowDown size={20} aria-hidden="true" className="mt-1 shrink-0 text-redup" />
         <div>
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-            Download Laporan Bulanan
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Ekspor ringkasan penggunaan platform dalam rentang waktu tertentu
+          <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
+            Unduh laporan periodik
+          </h2>
+          <p className="mt-1 text-bantu text-redup">
+            Ekspor ringkasan penanganan laporan dalam rentang bulan tertentu.
           </p>
         </div>
       </div>
 
-      <div className="px-5 py-4">
-        {/* Date range picker */}
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              <CalendarRange className="mb-0.5 mr-1 inline h-3 w-3" />
-              Dari
-            </label>
-            <div className="flex gap-2">
-              <select
-                value={startMonth}
-                onChange={(e) => setStartMonth(Number(e.target.value))}
-                className={selectCls}
-              >
-                {MONTHS.map((m, i) => (
-                  <option key={m} value={i + 1}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={startYear}
-                onChange={(e) => setStartYear(Number(e.target.value))}
-                className={selectCls}
-              >
-                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
+      {/* Rentang bulan */}
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Dari bulan">
+          <div className="flex gap-2">
+            <GlassSelect
+              value={String(startMonth)}
+              onChange={(v) => setStartMonth(Number(v))}
+              options={OPSI_BULAN}
+              className="flex-1"
+            />
+            <GlassSelect
+              value={String(startYear)}
+              onChange={(v) => setStartYear(Number(v))}
+              options={OPSI_TAHUN}
+              className="w-28 shrink-0"
+            />
           </div>
+        </Field>
 
-          <div className="mb-2 text-slate-400 dark:text-slate-500">—</div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Sampai
-            </label>
-            <div className="flex gap-2">
-              <select
-                value={endMonth}
-                onChange={(e) => setEndMonth(Number(e.target.value))}
-                className={selectCls}
-              >
-                {MONTHS.map((m, i) => (
-                  <option key={m} value={i + 1}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={endYear}
-                onChange={(e) => setEndYear(Number(e.target.value))}
-                className={selectCls}
-              >
-                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
+        <Field label="Sampai bulan">
+          <div className="flex gap-2">
+            <GlassSelect
+              value={String(endMonth)}
+              onChange={(v) => setEndMonth(Number(v))}
+              options={OPSI_BULAN}
+              className="flex-1"
+            />
+            <GlassSelect
+              value={String(endYear)}
+              onChange={(v) => setEndYear(Number(v))}
+              options={OPSI_TAHUN}
+              className="w-28 shrink-0"
+            />
           </div>
+        </Field>
+      </div>
 
-          {/* Info tiket ditemukan */}
-          <div className="mb-2 rounded-xl bg-slate-50 px-3 py-2 text-sm dark:bg-slate-700/50">
-            {isRangeValid ? (
-              <span className="text-slate-600 dark:text-slate-300">
-                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                  {filtered.length}
-                </span>{" "}
-                tiket dalam periode ini
-              </span>
-            ) : (
-              <span className="text-rose-500">Rentang tidak valid</span>
-            )}
-          </div>
-        </div>
-
-        {/* Download buttons */}
-        <div className="mt-4 flex flex-wrap gap-2.5">
-          <button
-            onClick={() => handleDownload("pdf")}
-            disabled={!isRangeValid || loading !== null || filtered.length === 0}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all",
-              "bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:scale-95",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          >
-            {loading === "pdf" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="h-4 w-4" />
-            )}
-            {loading === "pdf" ? "Membuat PDF…" : "Download PDF"}
-          </button>
-
-          <button
-            onClick={() => handleDownload("excel")}
-            disabled={!isRangeValid || loading !== null || filtered.length === 0}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all",
-              "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:scale-95",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          >
-            {loading === "excel" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileSpreadsheet className="h-4 w-4" />
-            )}
-            {loading === "excel" ? "Membuat Excel…" : "Download Excel"}
-          </button>
-        </div>
-
-        {filtered.length === 0 && isRangeValid && (
-          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-            Tidak ada tiket dalam periode ini — coba rentang waktu yang berbeda.
-          </p>
+      {/* Jumlah laporan dalam rentang — dihitung real-time */}
+      <div
+        className="mt-4 flex items-center gap-2 rounded-[var(--radius-kartu)] border border-garis bg-latar px-4 py-3 text-bantu"
+        role="status"
+      >
+        <CalendarBlank size={18} aria-hidden="true" className="shrink-0 text-redup" />
+        {isRangeValid ? (
+          <span className="text-redup">
+            <span className="font-semibold tabular-nums text-tinta">{filtered.length}</span>{" "}
+            laporan dalam periode ini
+          </span>
+        ) : (
+          <span className="text-merah">
+            Rentang tidak valid — bulan akhir harus setelah bulan awal.
+          </span>
         )}
       </div>
-    </div>
+
+      {/* Tombol unduh */}
+      <div className="mt-5 flex flex-wrap gap-2.5">
+        <Button
+          type="button"
+          onClick={() => handleDownload("pdf")}
+          disabled={!isRangeValid || loading !== null || filtered.length === 0}
+        >
+          {loading === "pdf" ? (
+            <CircleNotch size={18} aria-hidden="true" className="animate-spin" />
+          ) : (
+            <FilePdf size={18} aria-hidden="true" />
+          )}
+          {loading === "pdf" ? "Membuat PDF…" : "Unduh PDF"}
+        </Button>
+
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => handleDownload("excel")}
+          disabled={!isRangeValid || loading !== null || filtered.length === 0}
+        >
+          {loading === "excel" ? (
+            <CircleNotch size={18} aria-hidden="true" className="animate-spin" />
+          ) : (
+            <FileXls size={18} aria-hidden="true" />
+          )}
+          {loading === "excel" ? "Membuat Excel…" : "Unduh Excel"}
+        </Button>
+      </div>
+
+      {filtered.length === 0 && isRangeValid && (
+        <p className="mt-3 text-bantu text-redup">
+          Tidak ada laporan dalam periode ini — coba rentang bulan yang berbeda.
+        </p>
+      )}
+    </section>
   );
 }

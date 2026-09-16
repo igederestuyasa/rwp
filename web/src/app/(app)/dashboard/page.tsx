@@ -24,10 +24,28 @@ export default function DashboardPage() {
   if (!user || user.role !== "admin") return null;
 
   return (
-    <div className="space-y-6">
-      <RwpDashboard />
-      <ChatRatingDashboard />
-      {user.subRole === "superior" && <ReportDownload />}
+    <div>
+      {/* Pembuka layar: h1 + subjudul (§Spasi — maksimal 4 elemen teks) */}
+      <header className="min-w-0">
+        <h1 className="pembuka-masuk text-halaman leading-[1.05] font-bold tracking-[-0.04em] text-balance text-tinta">
+          Dashboard
+        </h1>
+        <p
+          className="pembuka-masuk mt-3 max-w-[44ch] text-subjudul text-redup"
+          style={{ animationDelay: "60ms" }}
+        >
+          Pantau laporan RWP yang masuk dan penanganannya. Identitas pelapor tidak ditampilkan.
+        </p>
+      </header>
+
+      <div
+        className="pembuka-masuk mt-8 space-y-12"
+        style={{ animationDelay: "110ms" }}
+      >
+        <RwpDashboard />
+        <ChatRatingDashboard />
+        {user.subRole === "superior" && <ReportDownload />}
+      </div>
     </div>
   );
 }

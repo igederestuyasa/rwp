@@ -1,5 +1,11 @@
 "use client";
 
+// ============================================================
+// Dashboard RWP — tampilan sistem UI "HC Panel" (docs/DESIGN.md).
+// Ini pekerjaan tampilan: sumber data (useStore), perhitungan KPI, rentang
+// tren, dan deep-link kartu status ke /tiket?status=<Status> TIDAK berubah.
+// ============================================================
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -7,64 +13,101 @@ import {
   CartesianGrid, AreaChart, Area,
 } from "recharts";
 import {
-  ShieldAlert, EyeOff, Eye, Inbox, AlertTriangle, CheckCircle2,
-  XCircle, TrendingUp, BarChart2,
-} from "lucide-react";
+  ArrowUpRight, CheckCircle, Eye, EyeSlash, Tray, Warning, XCircle,
+} from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { STATUSES, KATEGORI_INSIDEN } from "@/lib/constants";
 import type { Status } from "@/lib/types";
 import { cn, localIsoDate, daysAgo } from "@/lib/utils";
 import { useTheme } from "@/lib/theme";
-import { DotGrid } from "@/components/ui/DotGrid";
+import { SectionTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Field";
+import { KosongHC } from "@/components/hc/KosongHC";
 
-const STATUS_GRAD: Record<Status, string> = {
-  Diterima:          "from-blue-500 to-indigo-600",
-  "Sedang Ditinjau": "from-amber-400 to-amber-600",
-  "Tindak Lanjut":   "from-orange-400 to-orange-600",
-  Selesai:           "from-emerald-400 to-teal-600",
-  Ditutup:           "from-slate-400 to-slate-600",
-};
+// ── Warna grafik dari token ───────────────────────────────────
+// Recharts butuh warna sebagai NILAI JavaScript, bukan kelas Tailwind. Supaya
+// grafik tetap ikut token (dan ikut mode gelap) nilainya dibaca dari CSS saat
+// runtime, bukan di-hardcode. Aman di SSR: getComputedStyle hanya dipanggil
+// kalau `document` ada.
+export const tokenWarna = (nama: string): string =>
+  typeof document === "undefined"
+    ? ""
+    : getComputedStyle(document.documentElement).getPropertyValue(nama).trim();
 
-const STATUS_SHADOW: Record<Status, string> = {
-  Diterima:          "hover:shadow-blue-200 dark:hover:shadow-blue-900/60",
-  "Sedang Ditinjau": "hover:shadow-amber-200 dark:hover:shadow-amber-900/60",
-  "Tindak Lanjut":   "hover:shadow-orange-200 dark:hover:shadow-orange-900/60",
-  Selesai:           "hover:shadow-emerald-200 dark:hover:shadow-emerald-900/60",
-  Ditutup:           "hover:shadow-slate-200 dark:hover:shadow-slate-700/60",
-};
+export interface PaletChart {
+  tinta: string;
+  redup: string;
+  garis: string;
+  kartu: string;
+  latar: string;
+  merah: string;
+}
 
-const STATUS_ICON: Record<Status, React.ElementType> = {
-  Diterima:          Inbox,
+/**
+ * Palet grafik bertoken. Dihitung ulang tiap tema berganti: lib/theme.tsx
+ * memasang kelas `.dark` ke <html> sebelum render berikutnya, jadi pembacaan
+ * token di sini selalu sesuai mode yang aktif.
+ */
+export function usePaletChart(): PaletChart {
+  const { theme } = useTheme();
+  return useMemo(() => {
+    void theme; // kunci perhitungan ulang — nilainya dibaca dari CSS, bukan dari sini
+    return {
+      tinta: tokenWarna("--color-tinta"),
+      redup: tokenWarna("--color-redup"),
+      garis: tokenWarna("--color-garis"),
+      kartu: tokenWarna("--color-kartu"),
+      latar: tokenWarna("--color-latar"),
+      merah: tokenWarna("--color-merah"),
+    };
+  }, [theme]);
+}
+
+/** Gaya tooltip Recharts: latar kartu, border garis, teks tinta, radius 12. */
+export function gayaTooltip(p: PaletChart) {
+  return {
+    contentStyle: {
+      borderRadius: 12,
+      border: `1px solid ${p.garis}`,
+      backgroundColor: p.kartu,
+      color: p.tinta,
+      fontSize: 12,
+      padding: "8px 12px",
+      boxShadow: "var(--shadow-popover)",
+    },
+    labelStyle: { color: p.tinta, fontWeight: 600 },
+    itemStyle: { color: p.redup },
+    cursorFill: p.latar,
+  };
+}
+
+// ── Ikon status (Phosphor, gaya regular) ──────────────────────
+const IKON_STATUS: Record<Status, React.ElementType> = {
+  Diterima:          Tray,
   "Sedang Ditinjau": Eye,
-  "Tindak Lanjut":   AlertTriangle,
-  Selesai:           CheckCircle2,
+  "Tindak Lanjut":   Warning,
+  Selesai:           CheckCircle,
   Ditutup:           XCircle,
 };
 
-// Warna per kategori insiden
-const KATEGORI_COLORS = [
-  "#f43f5e", "#fb923c", "#f59e0b", "#8b5cf6", "#3b82f6", "#0ea5e9", "#64748b",
+const PRESET_TREN = [
+  { label: "7 hari",  hari: 7 },
+  { label: "30 hari", hari: 30 },
+  { label: "3 bulan", hari: 90 },
 ];
+
+// Panel grafik: permukaan datar bertoken, radius 24, tanpa bayangan.
+const KELAS_PANEL =
+  "rounded-[var(--radius-panel)] border border-garis bg-kartu p-5 sm:p-6";
 
 export function RwpDashboard() {
   const { reports } = useStore();
   const router = useRouter();
-  const { theme } = useTheme();
-  const dark = theme === "dark";
 
-  const chartAxisTick  = dark ? "#94a3b8" : "#64748b";
-  const chartGrid      = dark ? "#334155" : "#f1f5f9";
-  const chartCursor    = dark ? "#1e293b" : "#f8fafc";
-  const tooltipStyle = {
-    borderRadius: 12,
-    border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`,
-    backgroundColor: dark ? "#1e293b" : "#ffffff",
-    color: dark ? "#cbd5e1" : "#0f172a",
-    fontSize: 12,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-  };
-  const tooltipLabelStyle = { color: dark ? "#e2e8f0" : "#0f172a", fontWeight: 600 };
-  const tooltipItemStyle  = { color: dark ? "#94a3b8" : "#475569" };
+  const palet = usePaletChart();
+  const tooltip = gayaTooltip(palet);
+  const gayaSumbu = { fontSize: 12, fill: palet.redup };
 
   const [trendFrom, setTrendFrom] = useState(() => localIsoDate(daysAgo(6)));
   const [trendTo, setTrendTo] = useState(() => localIsoDate());
@@ -122,172 +165,189 @@ export function RwpDashboard() {
   }, [rwpReports]);
 
   return (
-    <div className="space-y-6">
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-600 via-red-600 to-orange-600 text-white">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-10 h-72 w-72 rounded-full bg-orange-400/25 blur-3xl" />
-        <DotGrid />
+    <div className="space-y-12">
+      {/* ── Ringkasan (KPI) ── */}
+      <section>
+        <SectionTitle
+          title="Ringkasan laporan"
+          subtitle="Dihitung dari seluruh laporan RWP yang masuk."
+        />
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <KartuKpi label="Total laporan" nilai={totalRwp} />
+          <KartuKpi
+            label="Anonim"
+            nilai={anonCount}
+            keterangan={`${anonPct}% dari total`}
+            ikon={<EyeSlash size={20} aria-hidden="true" />}
+          />
+          <KartuKpi
+            label="Sedang aktif"
+            nilai={activeCount}
+            keterangan="Belum selesai atau ditutup"
+          />
+        </div>
+      </section>
 
-        <div className="relative px-6 pb-6 pt-6 sm:px-8 sm:pt-7">
-          <div className="flex flex-wrap items-start justify-between gap-5">
-            {/* Judul */}
+      {/* ── Kartu status: deep-link ke daftar tiket terfilter ── */}
+      <section>
+        <SectionTitle
+          title="Laporan per status"
+          subtitle="Pilih satu status untuk membuka daftar tiketnya."
+        />
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {STATUSES.map((s) => {
+            const Ikon = IKON_STATUS[s];
+            const count = countByStatus[s];
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => router.push(`/tiket?status=${encodeURIComponent(s)}`)}
+                className={cn(
+                  "group flex min-h-[92px] flex-col gap-2 rounded-[var(--radius-kartu)]",
+                  "border border-garis bg-kartu p-4 text-left",
+                  "transition-colors duration-150 ease-[var(--ease-standar)]",
+                  "hover:border-tinta active:scale-[.99]",
+                )}
+              >
+                <span className="flex items-center justify-between text-redup">
+                  <Ikon size={20} aria-hidden="true" />
+                  <ArrowUpRight
+                    size={18}
+                    aria-hidden="true"
+                    className={cn(
+                      "transition-all duration-200 ease-[var(--ease-standar)]",
+                      "group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-merah",
+                    )}
+                  />
+                </span>
+                <span className="text-bagian font-bold tabular-nums text-tinta">
+                  {count}
+                </span>
+                <span className="text-bantu text-redup">{s}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Grafik ── */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Tren laporan masuk */}
+        <div className={KELAS_PANEL}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-rose-100 ring-1 ring-white/20 backdrop-blur-sm">
-                <ShieldAlert className="h-3.5 w-3.5" />
-                Respectful Workplace Policy
-              </div>
-              <h1 className="mt-2.5 text-2xl font-bold tracking-tight">
-                Dashboard RWP
-              </h1>
-              <p className="mt-1 max-w-xs text-sm leading-relaxed text-rose-100">
-                Pemantauan laporan RWP. Identitas pelapor tidak ditampilkan.
+              <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
+                Tren laporan masuk
+              </h2>
+              <p className="mt-1 text-bantu text-redup">
+                Jumlah laporan per hari pada rentang terpilih.
               </p>
             </div>
-
-            {/* KPI Cards */}
-            <div className="flex flex-wrap gap-3">
-              {/* Total */}
-              <div className="min-w-[100px] rounded-2xl bg-white/15 px-4 py-3 text-center ring-1 ring-white/20 backdrop-blur-sm">
-                <div className="text-3xl font-bold">{totalRwp}</div>
-                <div className="mt-0.5 text-xs font-medium text-rose-100">Total Laporan</div>
-              </div>
-              {/* Anonim */}
-              <div className="min-w-[100px] rounded-2xl bg-white/15 px-4 py-3 text-center ring-1 ring-white/20 backdrop-blur-sm">
-                <div className="flex items-center justify-center gap-1.5">
-                  <EyeOff className="h-4 w-4 text-rose-200" />
-                  <span className="text-3xl font-bold">{anonCount}</span>
-                </div>
-                <div className="mt-0.5 text-xs font-medium text-rose-100">
-                  Anonim ({anonPct}%)
-                </div>
-              </div>
-              {/* Aktif */}
-              <div className="min-w-[100px] rounded-2xl bg-white/15 px-4 py-3 text-center ring-1 ring-white/20 backdrop-blur-sm">
-                <div className="text-3xl font-bold">{activeCount}</div>
-                <div className="mt-0.5 text-xs font-medium text-rose-100">Sedang Aktif</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Status cards */}
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {STATUSES.map((s) => {
-              const Icon = STATUS_ICON[s];
-              const count = countByStatus[s];
-              return (
-                <button
-                  key={s}
-                  onClick={() => router.push(`/tiket?status=${encodeURIComponent(s)}`)}
-                  className={cn(
-                    "group flex flex-col gap-1.5 rounded-2xl bg-white/10 p-3 text-left ring-1 ring-white/15",
-                    "transition-all hover:bg-white/20 hover:shadow-lg",
-                    STATUS_SHADOW[s],
-                  )}
-                >
-                  <div className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm",
-                    STATUS_GRAD[s],
-                  )}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="text-2xl font-bold">{count}</div>
-                  <div className="text-xs font-medium text-rose-100 leading-tight">{s}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Charts ── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Tren laporan masuk */}
-        <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700/60">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 text-white shadow-sm">
-                <TrendingUp className="h-3.5 w-3.5" />
-              </div>
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Tren Laporan Masuk
-              </h2>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {[
-                { label: "7H",  days: 7 },
-                { label: "30H", days: 30 },
-                { label: "3B",  days: 90 },
-              ].map(({ label, days }) => (
-                <button
+            <div className="flex flex-wrap items-center gap-1.5">
+              {PRESET_TREN.map(({ label, hari }) => (
+                <Button
                   key={label}
-                  onClick={() => setPreset(days)}
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-11"
+                  onClick={() => setPreset(hari)}
                 >
                   {label}
-                </button>
+                </Button>
               ))}
-              <input
-                type="date" value={trendFrom}
-                onChange={(e) => setTrendFrom(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
-              />
-              <span className="text-xs text-slate-400">–</span>
-              <input
-                type="date" value={trendTo}
-                onChange={(e) => setTrendTo(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
-              />
             </div>
           </div>
-          <div className="px-4 py-5">
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Input
+              type="date"
+              aria-label="Tanggal mulai tren"
+              value={trendFrom}
+              max={trendTo}
+              onChange={(e) => setTrendFrom(e.target.value)}
+              className="w-auto"
+            />
+            <span className="text-bantu text-redup">–</span>
+            <Input
+              type="date"
+              aria-label="Tanggal akhir tren"
+              value={trendTo}
+              min={trendFrom}
+              onChange={(e) => setTrendTo(e.target.value)}
+              className="w-auto"
+            />
+          </div>
+
+          <div className="mt-5">
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={trend}>
                 <defs>
                   <linearGradient id="rwpTrend" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#f43f5e" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                    <stop offset="5%"  stopColor={palet.merah} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={palet.merah} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: chartAxisTick }} tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: chartAxisTick }} tickLine={false} axisLine={false} width={28} />
-                <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} cursor={{ fill: chartCursor }} />
-                <Area type="monotone" dataKey="value" name="Laporan" stroke="#f43f5e" strokeWidth={2} fill="url(#rwpTrend)" dot={false} activeDot={{ r: 4 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={palet.garis} vertical={false} />
+                <XAxis dataKey="date" tick={gayaSumbu} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tick={gayaSumbu} tickLine={false} axisLine={false} width={28} />
+                <Tooltip
+                  contentStyle={tooltip.contentStyle}
+                  labelStyle={tooltip.labelStyle}
+                  itemStyle={tooltip.itemStyle}
+                  cursor={{ fill: tooltip.cursorFill }}
+                />
+                <Area
+                  type="monotone" dataKey="value" name="Laporan"
+                  stroke={palet.merah} strokeWidth={2}
+                  fill="url(#rwpTrend)" dot={false}
+                  activeDot={{ r: 4, fill: palet.merah, stroke: palet.kartu, strokeWidth: 2 }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Breakdown per kategori insiden */}
-        <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-          <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-4 dark:border-slate-700/60">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-sm">
-              <BarChart2 className="h-3.5 w-3.5" />
-            </div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Laporan per Kategori
-            </h2>
-          </div>
-          <div className="px-4 py-5">
+        <div className={KELAS_PANEL}>
+          <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
+            Laporan per kategori
+          </h2>
+          <p className="mt-1 text-bantu text-redup">
+            Kategori insiden dengan laporan terbanyak di urutan atas.
+          </p>
+
+          <div className="mt-5">
             {byKategori.length === 0 ? (
-              <div className="flex h-[200px] items-center justify-center text-sm text-slate-400">
-                Belum ada data laporan.
-              </div>
+              <KosongHC
+                judul="Belum ada laporan"
+                ajakan="Begitu laporan pertama masuk, sebarannya per kategori muncul di sini."
+              />
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={byKategori} layout="vertical" margin={{ left: 8, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: chartAxisTick }} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={palet.garis} horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={gayaSumbu} tickLine={false} axisLine={false} />
                   <YAxis
-                    type="category" dataKey="name" width={160}
-                    tick={{ fontSize: 10, fill: chartAxisTick }} tickLine={false} axisLine={false}
+                    type="category" dataKey="name" width={140}
+                    tick={gayaSumbu} tickLine={false} axisLine={false}
                     tickFormatter={(v: string) => v.replace(" (harassment)", "").replace(" (bullying)", "")}
                   />
-                  <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} cursor={{ fill: chartCursor }} />
-                  <Bar dataKey="value" name="Laporan" radius={[0, 4, 4, 0]}>
-                    {byKategori.map((_, i) => (
-                      <Cell key={i} fill={KATEGORI_COLORS[i % KATEGORI_COLORS.length]} />
+                  <Tooltip
+                    contentStyle={tooltip.contentStyle}
+                    labelStyle={tooltip.labelStyle}
+                    itemStyle={tooltip.itemStyle}
+                    cursor={{ fill: tooltip.cursorFill }}
+                  />
+                  {/* Satu warna (tinta) dengan gradasi opasitas — bukan palet pelangi. */}
+                  <Bar dataKey="value" name="Laporan" radius={[0, 4, 4, 0]} fill={palet.tinta}>
+                    {byKategori.map((d, i) => (
+                      <Cell
+                        key={d.name}
+                        fill={palet.tinta}
+                        fillOpacity={Math.max(0.4, 1 - i * 0.1)}
+                      />
                     ))}
                   </Bar>
                 </BarChart>
@@ -295,47 +355,73 @@ export function RwpDashboard() {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Anonim vs Teridentifikasi */}
-      <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-700/60">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-slate-500 to-slate-700 text-white shadow-sm">
-              <EyeOff className="h-3.5 w-3.5" />
+      {/* ── Privasi pelapor ── */}
+      <section className={KELAS_PANEL}>
+        <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
+          Privasi pelapor
+        </h2>
+        <p className="mt-1 text-bantu text-redup">
+          Perbandingan laporan anonim dan teridentifikasi.
+        </p>
+
+        <div className="mt-5 flex flex-wrap items-center gap-8">
+          <div className="min-w-[200px] flex-1">
+            <div className="mb-2 flex justify-between text-bantu text-redup">
+              <span>Anonim</span>
+              <span>Teridentifikasi</span>
             </div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Privasi Pelapor
-            </h2>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-6 px-5 py-5">
-          {/* Progress bar */}
-          <div className="flex-1 min-w-[200px]">
-            <div className="mb-2 flex justify-between text-xs font-medium">
-              <span className="text-slate-500 dark:text-slate-400">Anonim</span>
-              <span className="text-slate-500 dark:text-slate-400">Teridentifikasi</span>
-            </div>
-            <div className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+            <div className="h-3 overflow-hidden rounded-full bg-latar">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-rose-500 to-orange-400 transition-all"
+                className="h-full rounded-full bg-tinta transition-all duration-150"
                 style={{ width: `${anonPct}%` }}
               />
             </div>
           </div>
-          {/* Angka */}
-          <div className="flex gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">{anonCount}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Anonim ({anonPct}%)</div>
+
+          <div className="flex gap-8">
+            <div>
+              <div className="text-panel font-bold tabular-nums text-tinta">{anonCount}</div>
+              <div className="text-bantu text-redup">Anonim ({anonPct}%)</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-slate-700 dark:text-slate-200">{totalRwp - anonCount}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Teridentifikasi ({100 - anonPct}%)</div>
+            <div>
+              <div className="text-panel font-bold tabular-nums text-tinta">
+                {totalRwp - anonCount}
+              </div>
+              <div className="text-bantu text-redup">
+                Teridentifikasi ({100 - anonPct}%)
+              </div>
             </div>
           </div>
         </div>
+      </section>
+    </div>
+  );
+}
+
+// ── Kartu KPI: permukaan datar bertoken, tanpa bayangan & gradient ──
+function KartuKpi({
+  label,
+  nilai,
+  keterangan,
+  ikon,
+}: {
+  label: string;
+  nilai: number;
+  keterangan?: string;
+  ikon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[var(--radius-kartu)] border border-garis bg-kartu p-4">
+      <div className="flex items-center gap-2 text-bantu font-semibold text-redup">
+        {ikon}
+        {label}
       </div>
+      <div className="mt-2 text-panel font-bold tabular-nums leading-none text-tinta">
+        {nilai}
+      </div>
+      {keterangan && <p className="mt-2 text-bantu text-redup">{keterangan}</p>}
     </div>
   );
 }

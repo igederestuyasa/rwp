@@ -1,15 +1,24 @@
 "use client";
 
+// ============================================================
+// Rating asisten — panel agregat di dashboard admin.
+// Tampilan mengikuti sistem UI "HC Panel" (docs/DESIGN.md). Logika tidak
+// berubah: rentang tanggal, preset, RPC get_chat_feedback_summary, dan
+// pemisahan mock/Supabase tetap sama. Isi percakapan TIDAK pernah dibaca (§9.2).
+// ============================================================
+
 import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, Tooltip,
   LineChart, Line, CartesianGrid,
 } from "recharts";
-import { Star } from "lucide-react";
+import { Star } from "@phosphor-icons/react";
 import { getSupabase, USE_MOCK } from "@/lib/supabaseClient";
-import { useTheme } from "@/lib/theme";
 import { localIsoDate, daysAgo } from "@/lib/utils";
 import { ASSISTANT_NAME } from "@/lib/constants";
+import { usePaletChart, gayaTooltip } from "@/components/RwpDashboard";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Field";
 
 // ── Tipe ──────────────────────────────────────────────────────
 interface FeedbackRow {
@@ -20,18 +29,10 @@ interface FeedbackRow {
 
 // ── Konstanta ──────────────────────────────────────────────────
 const PRESETS: { label: string; days: number }[] = [
-  { label: "7H",  days: 7 },
-  { label: "30H", days: 30 },
-  { label: "3B",  days: 90 },
+  { label: "7 hari",  days: 7 },
+  { label: "30 hari", days: 30 },
+  { label: "3 bulan", days: 90 },
 ];
-
-const STAR_COLORS: Record<number, string> = {
-  1: "#f43f5e",
-  2: "#fb923c",
-  3: "#facc15",
-  4: "#34d399",
-  5: "#10b981",
-};
 
 // ── Mock data ──────────────────────────────────────────────────
 function makeMockRows(from: string, to: string): FeedbackRow[] {
@@ -87,8 +88,6 @@ function toTrend(rows: FeedbackRow[], from: string, to: string): TrendPoint[] {
 // ── Komponen utama ─────────────────────────────────────────────
 
 export function ChatRatingDashboard() {
-  const { theme } = useTheme();
-  const dark = theme === "dark";
   const today = localIsoDate();
 
   const [fetchedRows, setFetchedRows] = useState<FeedbackRow[]>([]);
@@ -136,80 +135,88 @@ export function ChatRatingDashboard() {
     return totalRatings > 0 ? Math.round((totalSum / totalRatings) * 10) / 10 : null;
   }, [rows, totalRatings]);
 
-  // Chart styles (seragam dengan dashboard)
-  const axisColor   = dark ? "#94a3b8" : "#64748b";
-  const axisColorMuted = dark ? "#64748b" : "#94a3b8";
-  const gridColor   = dark ? "#334155" : "#f1f5f9";
-  const tooltipStyle = {
-    borderRadius: 12,
-    border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`,
-    backgroundColor: dark ? "#1e293b" : "#fff",
-    color: dark ? "#cbd5e1" : "#0f172a",
-    fontSize: 12,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-  };
+  // Warna grafik dari token (seragam dengan RwpDashboard).
+  const palet = usePaletChart();
+  const tooltip = gayaTooltip(palet);
+  const gayaSumbu = { fontSize: 12, fill: palet.redup };
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-700/60">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
-            <Star className="h-4 w-4" />
-          </div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+    <section className="rounded-[var(--radius-panel)] border border-garis bg-kartu p-5 sm:p-6">
+      {/* Kepala panel */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
             Rating {ASSISTANT_NAME}
           </h2>
+          <p className="mt-1 text-bantu text-redup">
+            Ulasan agregat dari karyawan, tanpa isi percakapan.
+          </p>
         </div>
-
-        {/* Kontrol tanggal */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <input
-            type="date" value={from} max={to}
-            onChange={(e) => setFrom(e.target.value)}
-            className="rounded-lg border border-slate-200/60 bg-white/60 px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-300 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-200"
-          />
-          <span className="text-xs text-slate-400">—</span>
-          <input
-            type="date" value={to} min={from}
-            onChange={(e) => setTo(e.target.value)}
-            className="rounded-lg border border-slate-200/60 bg-white/60 px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-300 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-200"
-          />
           {PRESETS.map(({ label, days }) => (
-            <button
+            <Button
               key={label}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-11"
               onClick={() => setPreset(days)}
-              className="rounded-md px-2 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      {/* Konten */}
-      <div className={`p-6 transition-opacity duration-150 ${loading ? "opacity-50 pointer-events-none" : ""}`}>
+      {/* Kontrol tanggal */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Input
+          type="date"
+          aria-label="Tanggal mulai rating"
+          value={from}
+          max={to}
+          onChange={(e) => setFrom(e.target.value)}
+          className="w-auto"
+        />
+        <span className="text-bantu text-redup">–</span>
+        <Input
+          type="date"
+          aria-label="Tanggal akhir rating"
+          value={to}
+          min={from}
+          onChange={(e) => setTo(e.target.value)}
+          className="w-auto"
+        />
+      </div>
 
-        {/* KPI row */}
-        <div className="mb-6 flex flex-wrap gap-4">
-          <KpiChip
-            label="Total Ulasan"
-            value={totalRatings === 0 ? "—" : totalRatings.toLocaleString("id-ID")}
+      {/* Konten */}
+      <div
+        className={`mt-6 transition-opacity duration-150 ${
+          loading ? "pointer-events-none opacity-50" : ""
+        }`}
+      >
+        {/* Ringkasan */}
+        <div className="flex flex-wrap items-center gap-3">
+          <KartuRingkas
+            label="Total ulasan"
+            nilai={totalRatings === 0 ? "—" : totalRatings.toLocaleString("id-ID")}
           />
-          <KpiChip
-            label="Rata-rata Bintang"
-            value={avgStars === null ? "—" : `${avgStars} / 5`}
-            accent
+          <KartuRingkas
+            label="Rata-rata bintang"
+            nilai={avgStars === null ? "—" : `${avgStars} / 5`}
           />
           {avgStars !== null && (
-            <div className="flex items-center gap-0.5">
+            <div
+              className="flex items-center gap-1"
+              aria-label={`Rata-rata ${avgStars} dari 5 bintang`}
+            >
               {[1, 2, 3, 4, 5].map((s) => (
                 <Star
                   key={s}
-                  className="h-4 w-4"
-                  fill={s <= Math.round(avgStars) ? "#f59e0b" : "none"}
-                  stroke={s <= Math.round(avgStars) ? "#f59e0b" : "#94a3b8"}
+                  size={18}
+                  aria-hidden="true"
+                  weight={s <= Math.round(avgStars) ? "fill" : "regular"}
+                  className={s <= Math.round(avgStars) ? "text-tinta" : "text-garis-kuat"}
                 />
               ))}
             </div>
@@ -217,43 +224,51 @@ export function ChatRatingDashboard() {
         </div>
 
         {totalRatings === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
-            Belum ada ulasan pada rentang tanggal ini.
+          <p className="mt-6 text-isi text-redup">
+            Belum ada ulasan pada rentang tanggal ini — coba rentang yang lebih panjang.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-
+          <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* Distribusi bintang */}
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Distribusi Bintang
+              <h3 className="text-bantu font-semibold text-tinta">Distribusi bintang</h3>
+              <p className="mt-1 text-bantu text-redup">
+                Jumlah ulasan untuk tiap jumlah bintang.
               </p>
-              <div className="h-[180px]">
+              <div className="mt-4 h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={distribution}
                     margin={{ top: 4, right: 16, left: -24, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={palet.garis} vertical={false} />
                     <XAxis
                       dataKey="label"
-                      tick={{ fontSize: 11, fill: axisColor }}
+                      tick={gayaSumbu}
                       axisLine={false}
                       tickLine={false}
                     />
                     <YAxis
                       allowDecimals={false}
-                      tick={{ fontSize: 11, fill: axisColorMuted }}
+                      tick={gayaSumbu}
                       axisLine={false}
                       tickLine={false}
                     />
                     <Tooltip
-                      contentStyle={tooltipStyle}
+                      contentStyle={tooltip.contentStyle}
+                      labelStyle={tooltip.labelStyle}
+                      itemStyle={tooltip.itemStyle}
+                      cursor={{ fill: tooltip.cursorFill }}
                       formatter={(v) => [v, "Ulasan"]}
                     />
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                    {/* Satu warna (tinta), makin banyak bintang makin pekat. */}
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48} fill={palet.tinta}>
                       {distribution.map((d) => (
-                        <Cell key={d.stars} fill={STAR_COLORS[d.stars]} />
+                        <Cell
+                          key={d.stars}
+                          fill={palet.tinta}
+                          fillOpacity={0.4 + d.stars * 0.12}
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -263,19 +278,20 @@ export function ChatRatingDashboard() {
 
             {/* Tren rata-rata harian */}
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Tren Rata-rata Harian
+              <h3 className="text-bantu font-semibold text-tinta">Tren rata-rata harian</h3>
+              <p className="mt-1 text-bantu text-redup">
+                Rata-rata bintang per hari pada rentang terpilih.
               </p>
-              <div className="h-[180px]">
+              <div className="mt-4 h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={trend}
                     margin={{ top: 4, right: 16, left: -24, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={palet.garis} vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 10, fill: axisColorMuted }}
+                      tick={gayaSumbu}
                       axisLine={false}
                       tickLine={false}
                       interval="preserveStartEnd"
@@ -283,20 +299,23 @@ export function ChatRatingDashboard() {
                     <YAxis
                       domain={[1, 5]}
                       ticks={[1, 2, 3, 4, 5]}
-                      tick={{ fontSize: 11, fill: axisColorMuted }}
+                      tick={gayaSumbu}
                       axisLine={false}
                       tickLine={false}
                     />
                     <Tooltip
-                      contentStyle={tooltipStyle}
+                      contentStyle={tooltip.contentStyle}
+                      labelStyle={tooltip.labelStyle}
+                      itemStyle={tooltip.itemStyle}
+                      cursor={{ fill: tooltip.cursorFill }}
                       formatter={(v) => [`${v} bintang`, "Rata-rata"]}
                     />
                     <Line
                       type="monotone"
                       dataKey="avg"
-                      stroke="#f59e0b"
+                      stroke={palet.merah}
                       strokeWidth={2}
-                      dot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }}
+                      dot={{ r: 3, fill: palet.merah, strokeWidth: 0 }}
                       connectNulls
                     />
                   </LineChart>
@@ -306,17 +325,16 @@ export function ChatRatingDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
-function KpiChip({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+// Kartu ringkas: permukaan datar bertoken, tanpa bayangan.
+function KartuRingkas({ label, nilai }: { label: string; nilai: string }) {
   return (
-    <div className="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200/60 dark:bg-slate-700/50 dark:ring-slate-600/60">
-      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
-      <p className={`text-xl font-bold ${accent ? "text-amber-500" : "text-slate-900 dark:text-slate-100"}`}>
-        {value}
-      </p>
+    <div className="rounded-[var(--radius-kartu)] border border-garis bg-kartu px-4 py-3">
+      <p className="text-bantu text-redup">{label}</p>
+      <p className="mt-1 text-bagian font-bold tabular-nums text-tinta">{nilai}</p>
     </div>
   );
 }
