@@ -49,6 +49,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: process.env.NEXT_PUBLIC_DEV_ORIGIN
     ? [process.env.NEXT_PUBLIC_DEV_ORIGIN]
     : [],
+  experimental: {
+    // Ikon diimpor dari akar paket di 30+ berkas; tanpa ini Turbopack
+    // mem-parse ribuan modul barrel tiap kompilasi dev. Paket populer lain
+    // (recharts, lucide) sudah ada di daftar bawaan Next, phosphor belum.
+    optimizePackageImports: ["@phosphor-icons/react"],
+  },
   async headers() {
     return [
       {

@@ -6,6 +6,7 @@
 // Gerak dibatasi ke muat halaman dan umpan balik hover.
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight, ChatCircleText, EyeSlash, FileMagnifyingGlass,
   Lock, Plus, ShieldWarning,
@@ -289,14 +290,13 @@ export function LandingPage() {
             </a>
           </div>
           <div className="flex items-center gap-5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logos/danantara.png" alt="Danantara" className="h-8 w-auto"
+            {/* Tinggi 32px, lebar mengikuti rasio asli berkas (h-8 w-auto). */}
+            <Image
+              src="/logos/danantara.png" alt="Danantara" width={128} height={32} className="h-8 w-auto"
               onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logos/hk.png" alt="Hutama Karya" className="h-8 w-auto"
+            <Image
+              src="/logos/hk.png" alt="Hutama Karya" width={128} height={32} className="h-8 w-auto"
               onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
           </div>
