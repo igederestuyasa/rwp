@@ -1,120 +1,186 @@
 "use client";
 
 // Panel Layanan Psikologi (EAP) — 6 kanal kontak langsung, tanpa tiket.
-// Diekstrak dari /layanan (katalog HC) agar bisa berdiri sebagai halaman sendiri
-// di /psikologi. Prop `onBack` opsional: dipakai saat panel dirender di dalam
-// alur lain yang punya halaman induk untuk dituju.
+// Dipakai sebagai halaman /psikologi. Prop `onBack` opsional: dipakai saat panel
+// dirender di dalam alur lain yang punya halaman induk untuk dituju.
+//
+// Susunannya pola daftar-detail HC Panel (docs/DESIGN.md §Pola daftar-detail):
+// daftar kanal di kiri, panel detail menempel di kanan (desktop). Aksi utama
+// tiap kanal = membuka href-nya; tombol di panel menjalankan aksi yang sama.
 
-import { ChevronLeft, HeartHandshake, ExternalLink, ShieldCheck } from "lucide-react";
-import { PSIKOLOGI_CHANNELS } from "@/lib/constants";
+import { Suspense, type CSSProperties } from "react";
+import { ArrowLeft, ShieldCheck } from "@phosphor-icons/react";
+import {
+  PSIKOLOGI_CHANNELS,
+  type PsikologiChannel,
+  type PsikologiChannelType,
+} from "@/lib/constants";
+import { Button } from "@/components/ui/Button";
+import { ItemCard, ItemCardGrid } from "@/components/hc/ItemCard";
+import { DetailPanel } from "@/components/hc/DetailPanel";
+import { StatusLabel } from "@/components/hc/StatusLabel";
+import { useDaftarDetail } from "@/components/hc/useDaftarDetail";
 
-export function PsikologiPanel({ onBack }: { onBack?: () => void }) {
+// Jenis kanal dalam bahasa awam — dipakai sebagai kategori di panel detail.
+const JENIS_KANAL: Record<PsikologiChannelType, string> = {
+  tel: "Telepon",
+  whatsapp: "WhatsApp",
+  email: "Email",
+  url: "Tautan web",
+};
+
+/** Kanal web dibuka di tab baru; telepon & email tetap di tab yang sama. */
+function perluTabBaru(ch: PsikologiChannel): boolean {
+  return ch.type === "url" || ch.type === "whatsapp";
+}
+
+/** Tujuan kanal dalam bentuk yang enak dibaca (nomor, alamat email, domain). */
+function kontakKanal(ch: PsikologiChannel): string {
+  if (ch.type === "tel") return ch.href.replace(/^tel:/, "");
+  if (ch.type === "email") return ch.href.replace(/^mailto:/, "");
+  return ch.href.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+/** Aksi utama kanal — dipakai tombol panel detail. */
+function bukaKanal(ch: PsikologiChannel) {
+  if (perluTabBaru(ch)) window.open(ch.href, "_blank", "noopener,noreferrer");
+  else window.location.href = ch.href;
+}
+
+// ─── Susunan daftar-detail (§Spasi, bentuk, tata letak) ──────────────────────
+const GAYA_DAFTAR_DETAIL: CSSProperties = {
+  gridTemplateColumns: "minmax(0,1fr) minmax(320px,400px)",
+  gridTemplateAreas: '"pembuka panel" "konten panel"',
+  columnGap: 64,
+  rowGap: 32,
+};
+
+function PsikologiIsi({ onBack }: { onBack?: () => void }) {
+  // Pemilihan panel: hover intent 120ms, fokus memilih, id di `?pilih=`.
+  const { terpilih, propsHover } = useDaftarDetail<PsikologiChannel>({
+    items: PSIKOLOGI_CHANNELS,
+    idDari: (ch) => ch.id,
+  });
+
   return (
-    <div>
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="mb-5 inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
-        >
-          <ChevronLeft className="h-4 w-4" /> Kembali
-        </button>
-      )}
+    <div className="pt-6 lg:grid lg:pt-8" style={GAYA_DAFTAR_DETAIL}>
+      {/* Pembuka: keterangan program → h1 → subjudul (3 elemen teks) */}
+      <header style={{ gridArea: "pembuka" }}>
+        {onBack && (
+          <Button variant="secondary" className="mb-6 h-11" onClick={onBack}>
+            <ArrowLeft size={18} weight="regular" aria-hidden="true" />
+            Kembali
+          </Button>
+        )}
 
-      {/* Hero */}
-      <div className="relative mb-6 overflow-hidden rounded-3xl border border-line bg-surface shadow-sm">
-        {/* Circles gradient */}
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full"
-          style={{ background: "radial-gradient(circle, #14b8a6 0%, transparent 70%)", opacity: 0.12, animation: "hero-ring-1 12s ease-in-out infinite" }} />
-        <div className="pointer-events-none absolute -bottom-16 left-4 h-56 w-56 rounded-full"
-          style={{ background: "radial-gradient(circle, #10b981 0%, transparent 70%)", opacity: 0.1, animation: "hero-ring-2 14s ease-in-out infinite" }} />
-        {/* Dot grid gradient */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: "linear-gradient(to right, #10b981, #14b8a6)",
-            WebkitMaskImage: "radial-gradient(circle, black 1px, transparent 1px)",
-            maskImage: "radial-gradient(circle, black 1px, transparent 1px)",
-            WebkitMaskSize: "22px 22px",
-            maskSize: "22px 22px",
-            opacity: 0.2,
-            animation: "hero-dots 8s linear infinite",
-          }}
-        />
-        <div className="relative p-8">
-          <div className="flex items-center gap-4">
-            <div
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-lg"
-              style={{ background: "linear-gradient(135deg, #10b981, #14b8a6)" }}
-            >
-              <HeartHandshake className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1
-                className="text-xl font-bold bg-clip-text text-transparent"
-                style={{ backgroundImage: "linear-gradient(to right, #10b981, #14b8a6)" }}
-              >
-                Layanan Psikologi Perusahaan
-              </h1>
-              <p className="text-sm text-ink-secondary">Employee Assistance Program (EAP)</p>
-            </div>
-          </div>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-secondary">
-            Mengalami tekanan di tempat kerja, atau sedang memproses kejadian yang tidak
-            menyenangkan? Kamu tidak harus menghadapinya sendirian. Enam kanal di bawah ini
-            terhubung langsung ke tenaga profesional — tanpa perlu membuat laporan lebih dulu.
+        <p
+          className="pembuka-masuk text-isi leading-[1.4] font-medium text-redup"
+          style={{ animationDelay: "0ms" }}
+        >
+          Employee Assistance Program (EAP)
+        </p>
+        <h1
+          className="pembuka-masuk mt-2 text-halaman leading-[1.05] font-bold tracking-[-0.04em] text-balance text-tinta"
+          style={{ animationDelay: "60ms" }}
+        >
+          Layanan Psikologi Perusahaan
+        </h1>
+        <p
+          className="pembuka-masuk mt-3 max-w-[44ch] text-subjudul leading-[1.5] text-redup"
+          style={{ animationDelay: "110ms" }}
+        >
+          Enam kanal ini terhubung langsung ke tenaga profesional, tanpa perlu membuat
+          laporan lebih dulu.
+        </p>
+      </header>
+
+      {/* Konten: catatan privasi lalu daftar kanal */}
+      <div style={{ gridArea: "konten" }} className="mt-12 lg:mt-0">
+        {/* Catatan privasi — teks sengaja dipertahankan apa adanya */}
+        <div className="flex items-start gap-3 rounded-[var(--radius-kartu)] border border-garis bg-latar px-4 py-3.5">
+          <ShieldCheck
+            size={20}
+            weight="regular"
+            aria-hidden="true"
+            className="mt-0.5 shrink-0 text-redup"
+          />
+          <p className="text-bantu leading-[1.5] text-tinta">
+            Kanal-kanal ini <span className="font-semibold">terpisah dari sistem pelaporan</span>.
+            Isi sesi konseling tidak masuk ke aplikasi ini dan tidak terlihat oleh admin HC.
+            Menghubungi mereka juga tidak otomatis membuat laporan.
           </p>
         </div>
-      </div>
 
-      {/* Catatan privasi */}
-      <div className="mb-5 flex items-start gap-3 rounded-2xl bg-teal-50/70 px-4 py-3.5 ring-1 ring-teal-200 dark:bg-teal-900/20 dark:ring-teal-800/60">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-        <p className="text-sm leading-relaxed text-teal-900 dark:text-teal-200">
-          Kanal-kanal ini <span className="font-semibold">terpisah dari sistem pelaporan</span>.
-          Isi sesi konseling tidak masuk ke aplikasi ini dan tidak terlihat oleh admin HC.
-          Menghubungi mereka juga tidak otomatis membuat laporan.
-        </p>
-      </div>
-
-      {/* 6 kanal */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {PSIKOLOGI_CHANNELS.map((ch) => {
-          const Icon = ch.icon;
-          return (
+        <ItemCardGrid className="mt-6">
+          {PSIKOLOGI_CHANNELS.map((ch, i) => (
+            // Pembungkus hanya untuk membuka kanal web di tab baru: ItemCard
+            // merender <a> tanpa prop `target`, jadi navigasi bawaannya dicegat
+            // di fase capture lalu diteruskan ke window.open. Tautannya tetap
+            // <a href> asli, jadi klik kanan "buka di tab baru" ikut jalan.
             <div
               key={ch.id}
-              className="flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+              className="h-full"
+              onClickCapture={
+                perluTabBaru(ch)
+                  ? (e) => {
+                      e.preventDefault();
+                      window.open(ch.href, "_blank", "noopener,noreferrer");
+                    }
+                  : undefined
+              }
             >
-              <div className="flex items-start justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400">
-                  <Icon className="h-5 w-5" />
-                </div>
-                {ch.badge && (
-                  <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:ring-teal-800">
-                    {ch.badge}
-                  </span>
-                )}
-              </div>
-
-              <h3 className="mt-3.5 text-sm font-bold text-slate-900 dark:text-slate-100">{ch.label}</h3>
-              <p className="mt-1 flex-1 text-sm leading-snug text-slate-500 dark:text-slate-400">{ch.desc}</p>
-
-              <a
+              <ItemCard
+                as="a"
                 href={ch.href}
-                target={ch.type === "tel" || ch.type === "email" ? "_self" : "_blank"}
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600"
-              >
-                {ch.cta}
-                {(ch.type === "url" || ch.type === "whatsapp") && (
-                  <ExternalLink className="h-3.5 w-3.5" />
-                )}
-              </a>
+                className="h-full"
+                nama={ch.label}
+                deskripsi={ch.desc}
+                status={ch.badge ? <StatusLabel>{ch.badge}</StatusLabel> : undefined}
+                indeks={i}
+                {...propsHover(ch)}
+              />
             </div>
-          );
-        })}
+          ))}
+        </ItemCardGrid>
+      </div>
+
+      {/* Panel detail — desktop saja, menempel di atas (§Pola daftar-detail) */}
+      <div
+        style={{ gridArea: "panel" }}
+        className="hidden lg:sticky lg:top-6 lg:block lg:self-start"
+      >
+        <DetailPanel
+          entitas="kanal"
+          item={
+            terpilih
+              ? {
+                  nama: terpilih.label,
+                  kategori: JENIS_KANAL[terpilih.type],
+                  status: terpilih.badge ? (
+                    <StatusLabel>{terpilih.badge}</StatusLabel>
+                  ) : undefined,
+                  deskripsi: terpilih.desc,
+                  baris: [{ label: "Kontak", nilai: kontakKanal(terpilih) }],
+                }
+              : null
+          }
+          aksiLabel={terpilih?.cta}
+          onAksi={terpilih ? () => bukaKanal(terpilih) : undefined}
+        />
       </div>
     </div>
+  );
+}
+
+export function PsikologiPanel({ onBack }: { onBack?: () => void }) {
+  // useDaftarDetail memakai useSearchParams → butuh batas Suspense.
+  return (
+    <Suspense
+      fallback={
+        <div className="py-20 text-center text-bantu text-redup">Memuat kanal layanan…</div>
+      }
+    >
+      <PsikologiIsi onBack={onBack} />
+    </Suspense>
   );
 }
