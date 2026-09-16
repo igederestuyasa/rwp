@@ -43,7 +43,9 @@ permintaan eksplisit.
 ### Dua mode, satu kontrak
 
 `web/src/lib/supabaseClient.ts` mengekspor `USE_MOCK` dari
-`NEXT_PUBLIC_USE_MOCK`. Dua berkas yang flag-gated:
+`NEXT_PUBLIC_USE_MOCK` — mock **hanya bila nilainya persis `"true"`**, sama
+dengan `next.config.ts` dan route server (variabel kosong = Supabase). Dua
+berkas yang flag-gated:
 
 - `lib/auth.tsx` — mock localStorage vs Supabase Auth
 - `lib/store.tsx` — seed di memori vs Supabase
@@ -96,12 +98,18 @@ berurutan di setiap lingkungan:
 4. `20260101000400_rag_chunk_index.sql` — kolom `rag_chunks.chunk_index`
    (urutan potongan; insert per batch membuat `created_at` seragam sehingga
    urutan asli tidak bisa dipulihkan tanpa kolom ini)
+5. `20260101000500_pengerasan_rls.sql` — hasil audit: hapus
+   `users_insert_self`, `users_select` baris sendiri, admin tidak membaca
+   tabel `reports` langsung (hanya lewat `v_reports_admin` yang kini
+   berjalan sebagai pemilik dengan saringan `is_admin()`), bucket
+   `rwp-evidence` diikat ke pemilik laporan/admin, `with check` pada
+   update `chat_sessions`, helper `pemilik_laporan()`
 
 **Seed** (`web/supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
 yang menampung laporan asli:
 
-5. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
-6. `02_policies.sql` — isi halaman Kebijakan
+6. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
+7. `02_policies.sql` — isi halaman Kebijakan
 
 Seluruh migrasi idempotent dan mencatat versinya sendiri ke
 `supabase_migrations.schema_migrations`, tabel yang sama dipakai Supabase CLI.
@@ -121,6 +129,15 @@ RPC: `change_report_status`, `reveal_reporter`, `match_rag_chunks`,
   anonim **atau** pembacanya tidak ber-`can_escalate`. Penegakannya harus tetap di
   SQL. Pernah terjadi: pembatasan hanya ada di JSX sementara `store.tsx` melakukan
   `select("*")`, jadi setiap admin sebenarnya sudah memegang identitas pelapor.
+- **Admin tidak boleh membaca tabel `reports` langsung.** Sejak migrasi
+  `pengerasan_rls`, `reports_select` hanya untuk pelapor; admin membaca lewat
+  `v_reports_admin` (berjalan sebagai pemilik, saring `is_admin()` di dalam,
+  tanpa `reporter_id`). Menambah klausa `is_admin()` ke `reports_select` akan
+  membuka kembali `reporter_id` lewat REST dan mematikan audit `reveal_reporter`.
+  Perubahan status tetap lewat RPC, bukan `update` langsung.
+- **`users_select` hanya baris sendiri** dan tidak ada policy insert/update
+  dari aplikasi. Profil dibuat lewat seed atau SQL Editor. Jangan menambah
+  policy insert tanpa membatasi `role`/`can_escalate` di `with check`.
 - **Prefix `'[ESKALASI IDENTITAS] '`** pada catatan audit dibaca
   `components/Timeline.tsx` untuk merender baris amber. Ubah salah satu, ubah keduanya.
 - **`policies.pdf_path`** wajib ada. `kebijakan/page.tsx` menyeleksi kolom itu, dan

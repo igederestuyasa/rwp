@@ -16,8 +16,12 @@ const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Flag global: true = pakai data mock, false = pakai Supabase.
-// Default true agar app tetap jalan tanpa backend (mode dev/pilot).
-export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
+// Mock HANYA bila eksplisit "true" — sama dengan next.config.ts dan route
+// server. Dulu default-nya mock bila variabel kosong, sehingga deploy yang
+// lupa menyetel variabel ini diam-diam menampilkan tombol login demo dan
+// data palsu sementara route server sudah memakai Supabase sungguhan.
+// Untuk dev tanpa backend: salin .env.local.example (isinya sudah true).
+export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 let client: SupabaseClient | null = null;
 
