@@ -1,15 +1,15 @@
 // Konfigurasi menu navigasi — dipakai bersama Sidebar (desktop) & MobileDrawer (HP).
 import {
-  Home, Bot, Settings, HelpCircle, LayoutDashboard, ListChecks,
-  BookOpen, ShieldAlert, HeartHandshake, type LucideIcon,
-} from "lucide-react";
+  House, Robot, Gear, Question, SquaresFour, ListChecks,
+  BookOpen, ShieldWarning, HandHeart, type Icon,
+} from "@phosphor-icons/react";
 import { ASSISTANT_NAME } from "./constants";
 import type { Role } from "./types";
 
 export interface NavItem {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: Icon;
 }
 
 export interface NavConfig {
@@ -20,27 +20,27 @@ export interface NavConfig {
 }
 
 const BOTTOM: NavItem[] = [
-  { href: "/pengaturan", label: "Pengaturan", icon: Settings },
-  { href: "/bantuan", label: "Bantuan", icon: HelpCircle },
+  { href: "/pengaturan", label: "Pengaturan", icon: Gear },
+  { href: "/bantuan", label: "Bantuan", icon: Question },
 ];
 
-const ASISTEN: NavItem = { href: "/asisten", label: ASSISTANT_NAME, icon: Bot };
+const ASISTEN: NavItem = { href: "/asisten", label: ASSISTANT_NAME, icon: Robot };
 
 export const NAV: Record<Role, NavConfig> = {
   karyawan: {
     main: [
-      { href: "/beranda", label: "Beranda", icon: Home },
+      { href: "/beranda", label: "Beranda", icon: House },
       ASISTEN,
       { href: "/kebijakan", label: "Kebijakan RWP", icon: BookOpen },
-      { href: "/lapor", label: "Lapor Insiden", icon: ShieldAlert },
+      { href: "/lapor", label: "Lapor Insiden", icon: ShieldWarning },
       { href: "/laporan", label: "Lacak Laporan", icon: ListChecks },
-      { href: "/psikologi", label: "Layanan Psikologi", icon: HeartHandshake },
+      { href: "/psikologi", label: "Layanan Psikologi", icon: HandHeart },
     ],
     bottom: BOTTOM,
   },
   admin: {
     main: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard", label: "Dashboard", icon: SquaresFour },
       { href: "/tiket", label: "Daftar Laporan", icon: ListChecks },
       ASISTEN,
     ],

@@ -18,7 +18,7 @@
 // ============================================================
 import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { FileText, Loader2, AlertCircle } from "lucide-react";
+import { FileText, CircleNotch, WarningCircle } from "@phosphor-icons/react";
 import { getSupabase } from "@/lib/supabaseClient";
 
 // Gambar watermark tiled-diagonal ke seluruh canvas (di atas konten halaman).
@@ -31,7 +31,12 @@ function drawWatermark(
 ) {
   ctx.save();
   ctx.globalAlpha = 0.1;
-  ctx.fillStyle = "#1e293b"; // slate-800
+  // Warna dibaca dari token supaya watermark ikut mode gelap; canvas butuh
+  // nilai JS, bukan kelas.
+  ctx.fillStyle =
+    typeof document === "undefined"
+      ? "#000"
+      : getComputedStyle(document.documentElement).getPropertyValue("--color-tinta").trim() || "#000";
   ctx.font = `${14 * dpr}px sans-serif`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
@@ -110,12 +115,12 @@ function PdfPage({ pdf, pageNum, scale, watermark, placeholderW, placeholderH, r
   return (
     <div
       ref={wrapRef}
-      className="relative mx-auto bg-white shadow-sm"
+      className="relative mx-auto bg-kartu"
       style={{ width: placeholderW, minHeight: rendered ? undefined : placeholderH }}
     >
       {!rendered && (
-        <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-300">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center text-mikro text-redup">
+          <CircleNotch size={16} className="animate-spin" />
         </div>
       )}
       <canvas ref={canvasRef} className="block" />
@@ -189,29 +194,29 @@ export function PdfViewer({ path, title, watermark }: PdfViewerProps) {
 
   return (
     <div
-      className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm select-none dark:border-slate-700 dark:bg-slate-800"
+      className="overflow-hidden rounded-[var(--radius-kartu)] border border-garis bg-kartu select-none"
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50 px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800/60">
-        <FileText className="h-4 w-4 shrink-0 text-slate-400" />
-        <span className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">{title}</span>
+      <div className="flex items-center gap-2 border-b border-garis bg-latar px-4 py-2.5">
+        <FileText size={16} className="shrink-0 text-redup" />
+        <span className="truncate text-mikro font-medium text-redup">{title}</span>
       </div>
 
       {/* Area dokumen */}
       <div
         ref={containerRef}
-        className="overflow-y-auto bg-slate-100 p-4 dark:bg-slate-900"
+        className="overflow-y-auto bg-latar p-4"
         style={{ height: "75vh", minHeight: "500px" }}
       >
         {loading && (
-          <div className="flex h-full items-center justify-center gap-2 text-sm text-slate-400">
-            <Loader2 className="h-5 w-5 animate-spin" /> Memuat dokumen…
+          <div className="flex h-full items-center justify-center gap-2 text-bantu text-redup">
+            <CircleNotch size={20} className="animate-spin" /> Memuat dokumen…
           </div>
         )}
         {error && (
-          <div className="flex h-full items-center justify-center gap-2 text-sm text-slate-400">
-            <AlertCircle className="h-5 w-5" /> {error}
+          <div className="flex h-full items-center justify-center gap-2 text-bantu text-redup">
+            <WarningCircle size={20} /> {error}
           </div>
         )}
         {pdf && dims && (
