@@ -1,5 +1,23 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// Token ukuran huruf HC Panel (docs/DESIGN.md §Tipografi) berawalan "text-",
+// sama seperti token warna. tailwind-merge tidak mengenal nama kustom kita,
+// jadi secara bawaan ia menganggap "text-isi" dan "text-kartu" satu golongan
+// lalu MEMBUANG salah satunya. Akibatnya tombol utama sempat kehilangan
+// "text-kartu" dan teksnya jadi tinta di atas latar tinta alias tak terbaca.
+// Daftar berikut memberi tahu tailwind-merge mana yang ukuran huruf.
+const UKURAN_HURUF = [
+  "mikro", "bantu", "isi", "subjudul", "bagian", "panel", "halaman",
+];
+
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: UKURAN_HURUF }],
+    },
+  },
+});
 
 /** Gabung className Tailwind dengan aman (resolve konflik). */
 export function cn(...inputs: ClassValue[]) {
