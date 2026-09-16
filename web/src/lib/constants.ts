@@ -7,7 +7,6 @@ import type { Status, SubRole } from "./types";
 
 // ===== Brand =====
 export const APP_NAME = "RWP Hutama Karya";
-export const APP_TAGLINE = "Kanal kebijakan & pelaporan Respectful Workplace Policy";
 export const ASSISTANT_NAME = "Sahabat RWP";
 export const ORG_NAME = "PT Hutama Karya (Persero)";
 

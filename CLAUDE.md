@@ -140,7 +140,8 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   `scripts/docs/` gitignored.
 - **`MIN_SIMILARITY` harus dari data**, bukan dari angka yang beredar umum.
   Jalankan `scripts/diagnose-retrieval.mjs` setiap kali korpus berubah. Nilai
-  sekarang masih warisan korpus lama dan perlu disetel ulang.
+  sekarang masih warisan korpus lama dan perlu disetel ulang. Latar belakang
+  metodenya ada di `docs/embedding.md`.
 
 ---
 
@@ -154,10 +155,10 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
 - Dark mode lewat class `.dark` di `<html>`, dikelola `lib/theme.tsx`,
   disimpan di `localStorage` key `rwp_theme`. **Tailwind v4**: `darkMode: "selector"`
   wajib lewat `web/tailwind.config.js` yang direferensikan `@config` di `globals.css`.
-- Komponen bersama di `components/ui/`: `Button`, `Card`, `Field` (termasuk
-  `GlassSelect`), `StatusPill`, `Panel`, `EmptyState`, plus komponen HC Panel di `components/hc/`.
-  Pakai ulang,
-  jangan bikin varian baru.
+- Komponen bersama: primitif di `components/ui/` (`Button`, `Card`, `Field` termasuk
+  `GlassSelect`, `Panel`) dan sistem HC Panel di `components/hc/` (`StatusLabel`,
+  `KosongHC`, `ItemCard`, `DetailPanel`, `SearchField`, `FilterTabs`, `DataTable`,
+  `GenerativeIcon`, `Logo`). Pakai ulang, jangan bikin varian baru.
 - Prefix `rwp_` pada key `localStorage` dan nama bucket memang disengaja.
 
 ---

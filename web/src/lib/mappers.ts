@@ -61,7 +61,7 @@ export interface StatusLogRow {
 
 /** Parse kolom attachments (text[]) → EvidenceFile[]. Toleran terhadap
  *  data lama yang masih berupa nama biasa (path dikosongkan). */
-export function parseAttachments(arr: string[] | null): EvidenceFile[] | undefined {
+function parseAttachments(arr: string[] | null): EvidenceFile[] | undefined {
   if (!arr || arr.length === 0) return undefined;
   return arr.map((s) => {
     try {

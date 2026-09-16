@@ -10,8 +10,8 @@
 //     ekstensi/nama dari user TIDAK dipercaya, isi diperiksa.
 // ============================================================
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-export const MAX_FILE_SIZE_LABEL = "10 MB";
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE_LABEL = "10 MB";
 
 /** Cocokkan urutan byte pada offset tertentu. */
 function matchAt(b: Uint8Array, sig: number[], offset = 0): boolean {

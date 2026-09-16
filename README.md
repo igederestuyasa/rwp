@@ -52,8 +52,8 @@ web/                     ← aplikasi (satu-satunya yang dijalankan)
     docs/                ← korpus siap ingest (gitignored, dibangun skrip)
   vercel.json            ← menegaskan framework Next.js ke Vercel
 docs/DESIGN.md           ← sistem UI "HC Panel" (acuan semua perubahan tampilan)
+docs/embedding.md        ← praktik retrieval RAG & kalibrasi MIN_SIMILARITY
 file-file-embedding/     ← dokumen sumber mentah (handbook RWP asli)
-style.md, animation.md   ← panduan desain & motion
 deck-pitch.md            ← bahan presentasi
 ```
 
