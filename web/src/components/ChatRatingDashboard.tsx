@@ -91,26 +91,32 @@ export function ChatRatingDashboard() {
   const dark = theme === "dark";
   const today = localIsoDate();
 
-  const [rows, setRows] = useState<FeedbackRow[]>([]);
+  const [fetchedRows, setFetchedRows] = useState<FeedbackRow[]>([]);
   const [from, setFrom] = useState(() => localIsoDate(daysAgo(29)));
   const [to, setTo] = useState(today);
 
   const range = `${from}|${to}`;
   const [loadedRange, setLoadedRange] = useState<string | null>(null);
-  const loading = loadedRange !== range;
+
+  // Mode mock: baris dihitung langsung dari rentang tanggal. Ini fungsi murni,
+  // jadi tak perlu effect — menghitungnya saat render menghindari render kedua
+  // yang cuma menyalin hasil ke state.
+  const mockRows = useMemo(
+    () => (USE_MOCK ? makeMockRows(from, to) : []),
+    [from, to],
+  );
+
+  const rows    = USE_MOCK ? mockRows : fetchedRows;
+  const loading = USE_MOCK ? false : loadedRange !== range;
 
   useEffect(() => {
+    if (USE_MOCK) return;
     let active = true;
-    if (USE_MOCK) {
-      const mock = makeMockRows(from, to);
-      if (active) { setRows(mock); setLoadedRange(`${from}|${to}`); }
-      return () => { active = false; };
-    }
     void getSupabase()
       .rpc("get_chat_feedback_summary", { p_start: from, p_end: to })
       .then(({ data, error }) => {
         if (!active) return;
-        if (!error && data) setRows(data as FeedbackRow[]);
+        if (!error && data) setFetchedRows(data as FeedbackRow[]);
         setLoadedRange(`${from}|${to}`);
       });
     return () => { active = false; };

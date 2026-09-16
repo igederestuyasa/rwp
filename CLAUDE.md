@@ -150,8 +150,9 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
 - **Bangun bertahap.** Setiap langkah harus meninggalkan `npx tsc --noEmit` dan
   `npm run build` hijau.
 - **Verifikasi sebelum mengklaim selesai.** `tsc`, `eslint src`, `build`. Baseline
-  lint saat ini: 9 error react-hooks lama (auth/store/theme/idle-timeout/pengaturan)
-  yang sengaja tidak disentuh — jangan menambah yang baru.
+  lint saat ini: **0 error**, 6 warning (impor `DotGrid`/`ThemeSegment` tak terpakai,
+  satu `eslint-disable` yang sudah tidak perlu). Jangan menambah error baru — CI
+  memakai `eslint src` sebagai gate yang menggagalkan build.
 - **Jangan sentuh mekanika yang sudah terbukti** tanpa alasan: form status dua
   tahap di `tiket/[id]`, `Timeline`, `ChatThread`, `storage.ts`, pola flag-gated
   di `auth.tsx`/`store.tsx`.
@@ -255,10 +256,15 @@ Ini pilot di free tier untuk pembuktian konsep. Sebelum menampung laporan RWP as
 
 ## 11. Utang teknis yang diketahui
 
-- ~9 error lint `react-hooks` lama di `auth.tsx`, `store.tsx`, `theme.tsx`,
-  `useIdleTimeout.ts`, `pengaturan/page.tsx`. Sengaja dibiarkan: menyentuh
-  sinkronisasi auth menjelang demo berisiko tanpa imbalan. CI menjalankan
-  `eslint src` sebagai gate, jadi ini perlu dibereskan sebelum CI bisa hijau.
+- ~~9 error lint `react-hooks`~~ — **SELESAI.** Ternyata bukan di `auth.tsx`/
+  `store.tsx`/`theme.tsx` seperti catatan lama ini (ketiganya sudah bersih),
+  melainkan di `login/page.tsx` (4 ikon SVG statis dideklarasikan ulang tiap
+  render), `useIdleTimeout.ts` (tulis ref saat render + `setState` sinkron di
+  effect), `ChatRatingDashboard.tsx` dan `kebijakan/page.tsx` (`setState` sinkron
+  di effect). `eslint src` sekarang exit 0.
+- Sisa 6 warning lint yang belum disentuh: impor `DotGrid` tak terpakai di
+  `bantuan`/`laporan`/`pengaturan`/`profil`, `ThemeSegment` tak terpakai di
+  `pengaturan`, dan satu `eslint-disable` mubazir di `login/page.tsx`.
 - `MIN_SIMILARITY` di `api/asisten/route.ts` masih warisan korpus lama.
 - Notifikasi belum realtime (data dari Supabase, status baca/dismiss di localStorage).
 - Belum ada dukungan PDF/DOCX di skrip ingest — konversi manual dulu ke `.md`.

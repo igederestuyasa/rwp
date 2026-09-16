@@ -15,16 +15,20 @@ export function useIdleTimeout(onLogout: () => void) {
   const logoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const warnRef   = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const tickRef   = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-  // Simpan referensi terbaru agar closure di timer tidak stale
+  // Simpan referensi terbaru agar closure di timer tidak stale.
+  // Ditulis di effect, bukan saat render: menulis ref selama render bikin
+  // hasilnya tidak konsisten kalau React mengulang render.
   const onLogoutRef = useRef(onLogout);
-  onLogoutRef.current = onLogout;
+  useEffect(() => {
+    onLogoutRef.current = onLogout;
+  }, [onLogout]);
 
-  const reset = useCallback(() => {
+  // Hanya memasang ulang timer — sengaja TIDAK menyentuh state, supaya aman
+  // dipanggil langsung dari effect saat mount (state sudah di nilai awalnya).
+  const schedule = useCallback(() => {
     clearTimeout(logoutRef.current);
     clearTimeout(warnRef.current);
     clearInterval(tickRef.current);
-    setShowWarning(false);
-    setCountdown(60);
 
     // Jadwalkan peringatan
     warnRef.current = setTimeout(() => {
@@ -43,11 +47,19 @@ export function useIdleTimeout(onLogout: () => void) {
     }, IDLE_MS);
   }, []);
 
+  // Dipakai handler aktivitas: buang peringatan yang sedang tampil,
+  // lalu jadwalkan ulang dari nol.
+  const reset = useCallback(() => {
+    setShowWarning(false);
+    setCountdown(60);
+    schedule();
+  }, [schedule]);
+
   useEffect(() => {
     ACTIVITY_EVENTS.forEach(e =>
       window.addEventListener(e, reset, { passive: true }),
     );
-    reset(); // mulai timer saat komponen mount
+    schedule(); // mulai timer saat komponen mount
 
     return () => {
       ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, reset));
@@ -55,7 +67,7 @@ export function useIdleTimeout(onLogout: () => void) {
       clearTimeout(warnRef.current);
       clearInterval(tickRef.current);
     };
-  }, [reset]);
+  }, [reset, schedule]);
 
   return { showWarning, countdown, resetIdle: reset };
 }

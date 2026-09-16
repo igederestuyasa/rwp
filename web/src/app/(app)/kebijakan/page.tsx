@@ -181,13 +181,19 @@ export default function KebijakanPage() {
   const [loading, setLoading] = useState(!USE_MOCK);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Deep-link: /kebijakan?id=<policyId> langsung buka detail kebijakan tsb
-  useEffect(() => {
-    const id = searchParams.get("id");
-    if (!id || policies.length === 0 || selected) return;
-    const found = policies.find((p) => p.id === id);
+  // Deep-link: /kebijakan?id=<policyId> langsung buka detail kebijakan tsb.
+  // Disesuaikan saat render (pola resmi React "adjusting state during render"),
+  // bukan lewat effect — dan sengaja HANYA sekali. Versi effect sebelumnya ikut
+  // berjalan ulang setiap kali `selected` berubah, jadi tombol "kembali" di
+  // halaman detail langsung membuka ulang kebijakan yang sama selama `?id=`
+  // masih menempel di URL.
+  const deepLinkId = searchParams.get("id");
+  const [deepLinkApplied, setDeepLinkApplied] = useState(false);
+  if (!deepLinkApplied && deepLinkId && policies.length > 0) {
+    setDeepLinkApplied(true);
+    const found = policies.find((p) => p.id === deepLinkId);
     if (found) setSelected(found);
-  }, [policies, searchParams, selected]);
+  }
 
   useEffect(() => {
     if (USE_MOCK) return;
