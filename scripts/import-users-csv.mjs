@@ -15,7 +15,7 @@
  * Nilai sub_role yang valid: superior | rwp | (kosong = null, untuk karyawan)
  *
  * ⚠️  Kedua file CSV di-gitignore — JANGAN commit ke repo.
- * ⚠️  Butuh SUPABASE_SERVICE_ROLE_KEY di web/.env.local
+ * ⚠️  Butuh SUPABASE_SERVICE_ROLE_KEY di .env.local
  */
 
 import { createClient } from "@supabase/supabase-js";

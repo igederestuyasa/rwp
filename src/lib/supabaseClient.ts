@@ -32,7 +32,7 @@ export function getSupabase(): SupabaseClient {
   if (!URL || !ANON_KEY) {
     throw new Error(
       "Supabase env belum diisi. Set NEXT_PUBLIC_SUPABASE_URL & " +
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY di web/.env.local, atau biarkan " +
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY di .env.local, atau biarkan " +
         "NEXT_PUBLIC_USE_MOCK=true untuk mode mock.",
     );
   }

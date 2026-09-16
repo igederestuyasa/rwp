@@ -7,11 +7,11 @@
 // ulang korpus dasar sehingga setup RAG bisa diulang dari nol.
 //
 // Sumber:
-//   1. handbook RWP  ← web/src/lib/policies.ts (POLICIES[0].markdown)
+//   1. handbook RWP  ← src/lib/policies.ts (POLICIES[0].markdown)
 //      Sengaja dari sini, bukan dari file mentah hasil OCR: teks di sini
 //      sudah bersih DAN identik dengan yang dibaca halaman /kebijakan,
 //      jadi asisten dan halaman kebijakan tidak bercerita beda.
-//   2. dokumen cara pakai ← web/scripts/corpus/*.md (ikut di-commit)
+//   2. dokumen cara pakai ← scripts/corpus/*.md (ikut di-commit)
 //
 // Pakai:
 //   node scripts/build-corpus.mjs

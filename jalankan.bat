@@ -10,6 +10,6 @@ echo.
 echo  Tekan Ctrl+C untuk menghentikan server.
 echo.
 
-cd /d "%~dp0web"
+cd /d "%~dp0"
 npm run dev
 pause

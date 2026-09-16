@@ -4,6 +4,12 @@
 > Kalau ada konflik antara dokumen ini dan kode, **kode yang menang** — lalu
 > perbarui dokumen ini.
 
+@AGENTS.md
+
+> Aplikasi Next.js ada **langsung di root repo** (`package.json`, `src/`,
+> `supabase/`, `scripts/`). Folder `web/` sudah tidak ada — dipindah ke root
+> supaya Vercel mendeteksi Next.js tanpa pengaturan Root Directory.
+
 ---
 
 ## 0. Apa aplikasi ini
@@ -22,7 +28,7 @@ Empat fungsi:
 Sisi admin: `/dashboard` (analitik) dan `/tiket` → `/tiket/[id]` (penanganan).
 
 **Nama**: `APP_NAME = "RWP Hutama Karya"`, `ASSISTANT_NAME = "Sahabat RWP"` —
-keduanya satu-satunya sumber kebenaran, di `web/src/lib/constants.ts`.
+keduanya satu-satunya sumber kebenaran, di `src/lib/constants.ts`.
 Jangan hardcode nama di tempat lain.
 
 ### Riwayat singkat
@@ -42,7 +48,7 @@ permintaan eksplisit.
 
 ### Dua mode, satu kontrak
 
-`web/src/lib/supabaseClient.ts` mengekspor `USE_MOCK` dari
+`src/lib/supabaseClient.ts` mengekspor `USE_MOCK` dari
 `NEXT_PUBLIC_USE_MOCK` — mock **hanya bila nilainya persis `"true"`**, sama
 dengan `next.config.ts` dan route server (variabel kosong = Supabase). Dua
 berkas yang flag-gated:
@@ -82,10 +88,10 @@ semua laporan di sini adalah laporan RWP. `kategori` wajib salah satu dari
 
 ## 2. Database
 
-SQL ada di `web/supabase/` dengan tata letak Supabase CLI. Petunjuk lengkap:
-`web/supabase/README.md`.
+SQL ada di `supabase/` dengan tata letak Supabase CLI. Petunjuk lengkap:
+`supabase/README.md`.
 
-**Migrasi** (`web/supabase/migrations/`) — mengubah bentuk database, dijalankan
+**Migrasi** (`supabase/migrations/`) — mengubah bentuk database, dijalankan
 berurutan di setiap lingkungan:
 
 1. `20260101000100_baseline_schema.sql` — tabel, trigger, helper, RLS, view
@@ -109,7 +115,7 @@ berurutan di setiap lingkungan:
    `pemilik_sesi_chat()` dan `(select auth.uid())` alih-alih subquery per
    baris. Makna kebijakan tidak berubah.
 
-**Seed** (`web/supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
+**Seed** (`supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
 yang menampung laporan asli:
 
 7. `01_users_demo.sql` — profil 3 akun demo (akun Auth dibuat manual dulu)
@@ -207,7 +213,7 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   `text-ink-secondary`) supaya dark mode ikut jalan tanpa penanganan khusus.
 - Dark mode lewat class `.dark` di `<html>`, dikelola `lib/theme.tsx`,
   disimpan di `localStorage` key `rwp_theme`. **Tailwind v4**: `darkMode: "selector"`
-  wajib lewat `web/tailwind.config.js` yang direferensikan `@config` di `globals.css`.
+  wajib lewat `tailwind.config.js` yang direferensikan `@config` di `globals.css`.
 - Komponen bersama: primitif di `components/ui/` (`Button`, `Card`, `Field` termasuk
   `GlassSelect`, `Panel`) dan sistem HC Panel di `components/hc/` (`StatusLabel`,
   `KosongHC`, `MemuatHC`, `ItemCard`, `DetailPanel`, `SearchField`, `FilterTabs`,
@@ -324,7 +330,7 @@ Ini pilot di free tier untuk pembuktian konsep. Sebelum menampung laporan RWP as
 - Tinjauan hukum/compliance untuk penyimpanan PII & data sensitif.
 - Migrasi ke infrastruktur berbayar: backup, audit log lengkap, kontrol akses.
 - Integrasi SSO/identitas resmi HK; hapus akun & data demo
-  (`web/src/lib/demoReports.ts`, `DEMO_USERS` di `mock.ts`).
+  (`src/lib/demoReports.ts`, `DEMO_USERS` di `mock.ts`).
 - Kebijakan retensi & penghapusan data.
 - Isi korpus asisten dengan dokumen kebijakan final.
 

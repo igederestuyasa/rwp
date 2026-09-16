@@ -18,7 +18,7 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 /** Client Supabase yang bertindak sebagai user (token dari client). */
 export function supabaseWithToken(accessToken: string): SupabaseClient {
   if (!URL || !ANON_KEY) {
-    throw new Error("Supabase env (URL/anon key) belum diisi di web/.env.local.");
+    throw new Error("Supabase env (URL/anon key) belum diisi di .env.local.");
   }
   return createClient(URL, ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${accessToken}` } },

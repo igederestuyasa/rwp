@@ -7,7 +7,7 @@ echo.
 echo  [1/2] Build sedang berjalan... (ini bisa 1-2 menit)
 echo.
 
-cd /d "%~dp0web"
+cd /d "%~dp0"
 npm run build
 
 if %errorlevel% neq 0 (

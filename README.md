@@ -40,17 +40,17 @@ Aplikasi berjalan **dua mode** lewat flag `NEXT_PUBLIC_USE_MOCK`:
 ## Struktur folder
 
 ```
-web/                     ← aplikasi (satu-satunya yang dijalankan)
-  src/app/               ← route (App Router)
-  src/components/        ← komponen UI (ui/ primitif, hc/ sistem HC Panel)
-  src/lib/               ← data layer, konstanta, tipe, auth, store
-  supabase/              ← database
-    migrations/          ← perubahan skema, berurutan
-    seeds/               ← isi demo (jangan dipakai di lingkungan produksi)
-  scripts/               ← ingest RAG & skrip uji
-    corpus/              ← sumber dokumen korpus RAG (ikut di-commit)
-    docs/                ← korpus siap ingest (gitignored, dibangun skrip)
-  vercel.json            ← menegaskan framework Next.js ke Vercel
+(root repo = aplikasi Next.js; tidak ada folder web/ lagi)
+src/app/               ← route (App Router)
+src/components/        ← komponen UI (ui/ primitif, hc/ sistem HC Panel)
+src/lib/               ← data layer, konstanta, tipe, auth, store
+supabase/              ← database
+  migrations/          ← perubahan skema, berurutan
+  seeds/               ← isi demo (jangan dipakai di lingkungan produksi)
+scripts/               ← ingest RAG & skrip uji
+  corpus/              ← sumber dokumen korpus RAG (ikut di-commit)
+  docs/                ← korpus siap ingest (gitignored, dibangun skrip)
+vercel.json            ← menegaskan framework Next.js ke Vercel
 docs/DESIGN.md           ← sistem UI "HC Panel" (acuan semua perubahan tampilan)
 docs/embedding.md        ← praktik retrieval RAG & kalibrasi MIN_SIMILARITY
 file-file-embedding/     ← dokumen sumber mentah (handbook RWP asli)
@@ -68,7 +68,6 @@ Node.js 20+ (disarankan 24 LTS), akun Supabase, dan API key OpenAI.
 ### 2. Pasang dependensi
 
 ```bash
-cd web
 npm ci
 ```
 
@@ -84,21 +83,21 @@ Cukup untuk melihat seluruh alur tanpa menyiapkan apa pun.
 
 ### 4. Menyalakan Supabase
 
-Buat project Supabase baru, lalu jalankan SQL di `web/supabase/` secara
+Buat project Supabase baru, lalu jalankan SQL di `supabase/` secara
 **berurutan** — lewat `supabase db push` atau tempel manual di **SQL Editor**.
 Petunjuk lengkap beserta cara menambah perubahan skema berikutnya ada di
-[`web/supabase/README.md`](web/supabase/README.md).
+[`supabase/README.md`](supabase/README.md).
 
 | Urutan | Berkas | Isi |
 |---|---|---|
-| 1 | `web/supabase/migrations/20260101000100_baseline_schema.sql` | Semua tabel, trigger, RLS, view admin, dan RPC |
-| 2 | `web/supabase/migrations/20260101000200_storage_buckets.sql` | Bucket `rwp-evidence` & `policy-docs` + batas ukuran/MIME |
-| 3 | `web/supabase/migrations/20260101000300_korpus_admin.sql` | Tabel `corpus_documents` + izin tulis admin untuk korpus AI |
-| 4 | `web/supabase/migrations/20260101000400_rag_chunk_index.sql` | Kolom `chunk_index` supaya isi korpus bisa dibaca urut |
-| 5 | `web/supabase/migrations/20260101000500_pengerasan_rls.sql` | Hasil audit: tutup celah RLS `users`/`reports`/bucket bukti |
-| 6 | `web/supabase/migrations/20260101000600_indeks_dan_policy.sql` | Indeks yang hilang + policy tabel anak lewat helper definer |
-| 7 | `web/supabase/seeds/01_users_demo.sql` | Profil 3 akun demo |
-| 8 | `web/supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
+| 1 | `supabase/migrations/20260101000100_baseline_schema.sql` | Semua tabel, trigger, RLS, view admin, dan RPC |
+| 2 | `supabase/migrations/20260101000200_storage_buckets.sql` | Bucket `rwp-evidence` & `policy-docs` + batas ukuran/MIME |
+| 3 | `supabase/migrations/20260101000300_korpus_admin.sql` | Tabel `corpus_documents` + izin tulis admin untuk korpus AI |
+| 4 | `supabase/migrations/20260101000400_rag_chunk_index.sql` | Kolom `chunk_index` supaya isi korpus bisa dibaca urut |
+| 5 | `supabase/migrations/20260101000500_pengerasan_rls.sql` | Hasil audit: tutup celah RLS `users`/`reports`/bucket bukti |
+| 6 | `supabase/migrations/20260101000600_indeks_dan_policy.sql` | Indeks yang hilang + policy tabel anak lewat helper definer |
+| 7 | `supabase/seeds/01_users_demo.sql` | Profil 3 akun demo |
+| 8 | `supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
 
 Dua yang pertama adalah **migrasi** (mengubah bentuk database, dijalankan di
 semua lingkungan). Dua terakhir adalah **seed** (isi demo — jangan dijalankan di
@@ -113,7 +112,7 @@ lingkungan yang menampung laporan asli).
 | `admin.rwp@hutamakarya.co.id` | admin RWP | `Password123!` |
 | `admin@hutamakarya.co.id` | admin superior | `Password123!` |
 
-Lalu isi `web/.env.local`:
+Lalu isi `.env.local`:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co     # tanpa /rest/v1/
@@ -139,7 +138,7 @@ Pengetahuan asisten dikelola dari **halaman admin `/korpus`** — tanpa terminal
 2. Tekan **Kirim ke korpus** pada kebijakan yang sudah terbit — isinya dipelajari
    asisten langsung dari baris yang sama yang dibaca karyawan di `/kebijakan`.
 3. Unggah dokumen cara-pakai `.md`/`.txt` (yang ikut repo ada di
-   `web/scripts/corpus/`), lalu tekan **Proses**. Progresnya tampil per dokumen.
+   `scripts/corpus/`), lalu tekan **Proses**. Progresnya tampil per dokumen.
 4. Hapus atau proses ulang dokumen kapan saja dari panel detailnya.
 
 Semua itu berjalan sebagai admin yang login lewat RLS, bukan `service_role`, jadi
@@ -148,11 +147,11 @@ route API-nya tidak bisa dipakai karyawan meski dipanggil langsung.
 **Setelah korpus berubah**, jalankan sekali dari terminal:
 
 ```bash
-cd web && node scripts/diagnose-retrieval.mjs   # ukur sebaran skor
+node scripts/diagnose-retrieval.mjs   # ukur sebaran skor
 ```
 
 Langkah ini **bukan formalitas**: keluarannya merekomendasikan nilai
-`MIN_SIMILARITY` untuk `web/src/app/api/asisten/route.ts`. Ambang yang sekarang
+`MIN_SIMILARITY` untuk `src/app/api/asisten/route.ts`. Ambang yang sekarang
 dikalibrasi untuk korpus lama dan hampir pasti perlu digeser. Jangan pakai angka
 "0.70–0.80" yang beredar umum — di setup ini terbukti salah. Latar metodenya di
 `docs/embedding.md`.
@@ -166,7 +165,6 @@ korpus — konversi dulu ke `.md`.
 ## Perintah harian
 
 ```bash
-cd web
 npm run dev              # server pengembangan
 npx tsc --noEmit         # type check
 npx eslint src           # lint
@@ -182,20 +180,19 @@ di-build sebelum databasenya ada, tapi tidak bisa diuji tanpa skema.
 
 ### 1. Import repo
 
-**Root Directory WAJIB diisi `web`.**
+Aplikasi Next.js ada langsung di root repo (`package.json`, `next.config.ts`,
+`vercel.json`), jadi **Root Directory dibiarkan kosong/default**. Vercel akan
+mendeteksi **Next.js** sendiri. Build command, output directory, dan install
+command biarkan default.
 
-Ini bukan opsional dan bukan sekadar kerapian. Vercel mendeteksi framework dengan
-memindai Root Directory, sementara root repo ini tidak punya `package.json` —
-aplikasinya ada di `web/`. Kalau dibiarkan default, Vercel melaporkan framework
-**"Other"**, tidak menjalankan build Next.js, dan hasilnya gagal atau kosong.
-Begitu Root Directory diisi `web`, framework langsung terbaca **Next.js**.
-
-Build command, output directory, dan install command biarkan default.
+Kalau project Vercel lo dibuat saat aplikasi masih di folder `web/`, buka
+*Project Settings → General → Root Directory* dan **kosongkan** nilainya, lalu
+deploy ulang.
 
 ### 2. Isi environment variables
 
 Isikan di *Project Settings → Environment Variables*, untuk **Production dan
-Preview**. Daftar lengkap beserta penjelasannya ada di `web/.env.local.example`.
+Preview**. Daftar lengkap beserta penjelasannya ada di `.env.local.example`.
 
 | Variabel | Nilai |
 |---|---|
@@ -206,7 +203,6 @@ Preview**. Daftar lengkap beserta penjelasannya ada di `web/.env.local.example`.
 | `OPENAI_API_KEY` | kunci OpenAI untuk asisten |
 | `OPENAI_CHAT_MODEL` | `gpt-4.1-mini` |
 | `OPENAI_EMBED_MODEL` | `text-embedding-3-small` |
-| `SUPABASE_STORAGE_BUCKET` | `rwp-evidence` |
 | `POLICY_PDF_BUCKET` | `policy-docs` |
 
 ⚠️ **Variabel `NEXT_PUBLIC_*` dibaca saat BUILD, bukan saat runtime.** Menambah
@@ -221,7 +217,7 @@ kosong. Kalau build gagal dengan pesan itu, variabelnya memang belum terpasang.
 
 ### 3. Jalankan migrasi di Supabase
 
-Lihat [`web/supabase/README.md`](web/supabase/README.md) untuk langkah lengkapnya.
+Lihat [`supabase/README.md`](supabase/README.md) untuk langkah lengkapnya.
 Ringkasnya, berurutan:
 
 1. `migrations/20260101000100_baseline_schema.sql`
@@ -270,7 +266,8 @@ Asisten baru berguna setelah korpusnya di-ingest — lihat bagian
 - **`.next` basi setelah menghapus route** → `tsc` mengeluh soal berkas yang sudah tidak ada. Hapus `.next`.
 - **Ganti `OPENAI_EMBED_MODEL`** → wajib ingest ulang semua dokumen. Dimensi vektor di skema = 1536.
 - **Reset kata sandi lewat email** → free tier Supabase dibatasi 2 email/jam, dan URL pengalihan harus di-whitelist di Dashboard.
-- **Vercel mendeteksi framework "Other"** → Root Directory belum diisi `web`. Root repo tidak punya `package.json`, jadi Vercel tidak menemukan Next.js.
+- **Vercel mendeteksi framework "Other"** → Root Directory masih menunjuk folder yang tidak ada (`web`). Kosongkan Root Directory di *Project Settings → General*; aplikasi kini di root repo.
+- **Build gagal: `NEXT_PUBLIC_SUPABASE_URL kosong padahal NEXT_PUBLIC_USE_MOCK bukan "true"`** → environment variables belum dipasang untuk lingkungan yang di-build (Production/Preview). Ini penjaga yang disengaja, bukan bug. Isi variabelnya, deploy ulang.
 - **Deploy jalan tapi semua data gagal dimuat** → `NEXT_PUBLIC_SUPABASE_URL` belum ada saat build, jadi host Supabase tidak masuk `connect-src` di CSP. Isi variabelnya lalu deploy ulang.
 
 ---
@@ -279,7 +276,7 @@ Asisten baru berguna setelah korpusnya di-ingest — lihat bagian
 
 - [ ] Validasi kategori insiden & alur status dengan kebijakan RWP resmi.
 - [ ] Tinjauan hukum/compliance untuk penyimpanan PII dan data sensitif.
-- [ ] Ganti akun demo dengan SSO atau akun resmi; hapus data demo (`web/src/lib/demoReports.ts`, `DEMO_USERS` di `mock.ts`).
+- [ ] Ganti akun demo dengan SSO atau akun resmi; hapus data demo (`src/lib/demoReports.ts`, `DEMO_USERS` di `mock.ts`).
 - [ ] Naikkan Supabase ke tier berbayar: backup, audit log, retensi data.
 - [ ] Enkripsi at-rest untuk `reporter_id`.
 - [ ] Rate limiting pada halaman masuk.

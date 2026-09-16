@@ -26,7 +26,6 @@ lingkungan yang sudah menampung laporan asli — akun demo bukan untuk produksi.
 ### Cara A — Supabase CLI (disarankan)
 
 ```bash
-cd web
 supabase link --project-ref <ref-project-kamu>
 supabase db push                 # menjalankan seluruh migrations/ yang belum tercatat
 psql "$DATABASE_URL" -f supabase/seeds/01_users_demo.sql
@@ -55,7 +54,7 @@ Jangan mengedit migrasi yang sudah pernah dijalankan di database mana pun —
 sampai. Buat berkas baru:
 
 ```bash
-cd web && supabase migration new nama_perubahan
+supabase migration new nama_perubahan
 ```
 
 atau secara manual, berkas `migrations/<UTC YYYYMMDDHHMMSS>_nama.sql` dengan blok

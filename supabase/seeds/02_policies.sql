@@ -7,7 +7,7 @@
 -- remunerasi, kode etik, pelatihan, beasiswa) sengaja tidak dibawa —
 -- aplikasi ini khusus RWP.
 --
--- Sumber teks: web/src/lib/policies.ts (POLICIES[0].markdown). Kalau
+-- Sumber teks: src/lib/policies.ts (POLICIES[0].markdown). Kalau
 -- salah satunya diubah, ubah keduanya — file TS dipakai sebagai fallback
 -- mode mock DAN saat tabel policies masih kosong.
 --

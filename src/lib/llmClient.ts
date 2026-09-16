@@ -31,7 +31,7 @@ export interface ChatMessage {
 function assertKey(): string {
   if (!OPENAI_API_KEY) {
     throw new Error(
-      "OPENAI_API_KEY belum diisi di web/.env.local. Asisten RWP butuh ini untuk embedding & chat.",
+      "OPENAI_API_KEY belum diisi di .env.local. Asisten RWP butuh ini untuk embedding & chat.",
     );
   }
   return OPENAI_API_KEY;

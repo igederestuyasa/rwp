@@ -1,7 +1,7 @@
 -- ============================================================
 -- RWP Hutama Karya — Skema database (Supabase / Postgres)
 -- ------------------------------------------------------------
--- Migrasi pertama. Lihat web/supabase/README.md untuk cara menjalankannya.
+-- Migrasi pertama. Lihat supabase/README.md untuk cara menjalankannya.
 --
 -- Aplikasi ini hanya menangani satu jalur: pelaporan RWP. Tidak ada
 -- konsep "layanan HC" atau grup fungsi di sini — pembeda hak akses admin
@@ -46,7 +46,7 @@ create table if not exists public.reports (
     ticket_no       text unique not null default '',
     reporter_id     uuid not null references public.users(id),
     -- Kategori dibatasi di level DB agar tidak bisa melenceng dari
-    -- KATEGORI_INSIDEN di web/src/lib/constants.ts. Pernah terjadi: seed
+    -- KATEGORI_INSIDEN di src/lib/constants.ts. Pernah terjadi: seed
     -- memakai "Perundungan (bullying)" sehingga chart kategori kosong.
     kategori        text not null check (kategori in (
                         'Diskriminasi', 'Kekerasan', 'Pelecehan', 'Perundungan',

@@ -4,7 +4,7 @@
  *
  * Jalankan: node scripts/add-demo-users.mjs
  *
- * ⚠️  Butuh SUPABASE_SERVICE_ROLE_KEY di web/.env.local
+ * ⚠️  Butuh SUPABASE_SERVICE_ROLE_KEY di .env.local
  * ⚠️  Hapus akun demo sebelum go-live produksi
  */
 

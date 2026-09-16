@@ -7,7 +7,7 @@
 // Alur: baca file .txt/.md → potong jadi chunk → embed (OpenAI) →
 //       insert ke rag_chunks (pakai service_role, bypass RLS insert).
 //
-// PRASYARAT di web/.env.local:
+// PRASYARAT di .env.local:
 //   NEXT_PUBLIC_SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY   (Dashboard > Settings > API > service_role)
 //   OPENAI_API_KEY
