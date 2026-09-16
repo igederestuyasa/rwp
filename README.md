@@ -42,11 +42,16 @@ Aplikasi berjalan **dua mode** lewat flag `NEXT_PUBLIC_USE_MOCK`:
 ```
 web/                     ← aplikasi (satu-satunya yang dijalankan)
   src/app/               ← route (App Router)
-  src/components/        ← komponen UI
+  src/components/        ← komponen UI (ui/ primitif, hc/ sistem HC Panel)
   src/lib/               ← data layer, konstanta, tipe, auth, store
-  scripts/               ← SQL setup, ingest RAG, skrip uji
+  supabase/              ← database
+    migrations/          ← perubahan skema, berurutan
+    seeds/               ← isi demo (jangan dipakai di lingkungan produksi)
+  scripts/               ← ingest RAG & skrip uji
     corpus/              ← sumber dokumen korpus RAG (ikut di-commit)
     docs/                ← korpus siap ingest (gitignored, dibangun skrip)
+  vercel.json            ← menegaskan framework Next.js ke Vercel
+docs/DESIGN.md           ← sistem UI "HC Panel" (acuan semua perubahan tampilan)
 file-file-embedding/     ← dokumen sumber mentah (handbook RWP asli)
 style.md, animation.md   ← panduan desain & motion
 deck-pitch.md            ← bahan presentasi
@@ -154,6 +159,90 @@ npm run build            # build produksi
 
 ---
 
+## Deploy ke Vercel
+
+Urutannya sengaja: **deploy dulu, baru migrasi, baru uji.** Aplikasi tetap bisa
+di-build sebelum databasenya ada, tapi tidak bisa diuji tanpa skema.
+
+### 1. Import repo
+
+**Root Directory WAJIB diisi `web`.**
+
+Ini bukan opsional dan bukan sekadar kerapian. Vercel mendeteksi framework dengan
+memindai Root Directory, sementara root repo ini tidak punya `package.json` —
+aplikasinya ada di `web/`. Kalau dibiarkan default, Vercel melaporkan framework
+**"Other"**, tidak menjalankan build Next.js, dan hasilnya gagal atau kosong.
+Begitu Root Directory diisi `web`, framework langsung terbaca **Next.js**.
+
+Build command, output directory, dan install command biarkan default.
+
+### 2. Isi environment variables
+
+Isikan di *Project Settings → Environment Variables*, untuk **Production dan
+Preview**. Daftar lengkap beserta penjelasannya ada di `web/.env.local.example`.
+
+| Variabel | Nilai |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase (tanpa `/rest/v1/`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key |
+| `NEXT_PUBLIC_USE_MOCK` | `false` |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role key — **server-only, mem-bypass RLS** |
+| `OPENAI_API_KEY` | kunci OpenAI untuk asisten |
+| `OPENAI_CHAT_MODEL` | `gpt-4.1-mini` |
+| `OPENAI_EMBED_MODEL` | `text-embedding-3-small` |
+| `SUPABASE_STORAGE_BUCKET` | `rwp-evidence` |
+| `POLICY_PDF_BUCKET` | `policy-docs` |
+
+⚠️ **Variabel `NEXT_PUBLIC_*` dibaca saat BUILD, bukan saat runtime.** Menambah
+atau mengubahnya tidak berpengaruh sampai kamu deploy ulang.
+
+`NEXT_PUBLIC_SUPABASE_URL` khususnya ikut menyusun header `Content-Security-Policy`
+di `next.config.ts`. Kalau kosong saat build, host Supabase tidak masuk
+`connect-src` dan browser memblokir **setiap** permintaan ke database — aplikasi
+tampak jalan tapi semua data gagal dimuat. Karena itu build sengaja dihentikan
+dengan pesan jelas bila `NEXT_PUBLIC_USE_MOCK` bukan `true` sementara URL-nya
+kosong. Kalau build gagal dengan pesan itu, variabelnya memang belum terpasang.
+
+### 3. Jalankan migrasi di Supabase
+
+Lihat [`web/supabase/README.md`](web/supabase/README.md) untuk langkah lengkapnya.
+Ringkasnya, berurutan:
+
+1. `migrations/20260101000100_baseline_schema.sql`
+2. `migrations/20260101000200_storage_buckets.sql`
+3. Buat 3 akun Auth demo di *Authentication → Users* (centang **Auto Confirm User**)
+4. `seeds/01_users_demo.sql`
+5. `seeds/02_policies.sql`
+
+Seed nomor 4 dan 5 hanya untuk pilot. **Jangan dijalankan** di lingkungan yang
+menampung laporan asli — akun demo bukan untuk produksi.
+
+### 4. Whitelist URL pengalihan
+
+*Authentication → URL Configuration*, tambahkan ke **Redirect URLs**:
+
+```
+https://<domain-kamu>/update-password
+```
+
+Tanpa ini, tautan reset kata sandi dari email berakhir 404.
+
+### 5. Uji setelah deploy
+
+| Yang diuji | Cara | Lulus kalau |
+|---|---|---|
+| Koneksi database | Masuk pakai akun demo | Berhasil masuk, tidak menggantung |
+| CSP benar | Buka Console browser | Tidak ada error `Refused to connect` |
+| RLS jalan | Masuk sebagai karyawan, buka `/laporan` | Hanya laporan sendiri yang tampil |
+| Privasi pelapor | Masuk sebagai admin RWP, buka laporan anonim | Nama & NIK pelapor tidak tampil |
+| Unggah bukti | Buat laporan dengan lampiran di `/lapor` | Berkas terunggah, bisa diunduh lagi |
+| Asisten | Tanya sesuatu di `/asisten` | Menjawab; kalau korpus kosong, menjawab jujur tidak ditemukan |
+
+Asisten baru berguna setelah korpusnya di-ingest — lihat bagian
+[Menyalakan asisten (RAG)](#5-menyalakan-asisten-rag).
+
+---
+
 ## Jebakan yang sudah pernah kena
 
 - **Brave Shields memblokir `supabase.co`** → request menggantung. Pakai Chrome, atau matikan Shields untuk localhost.
@@ -161,6 +250,8 @@ npm run build            # build produksi
 - **`.next` basi setelah menghapus route** → `tsc` mengeluh soal berkas yang sudah tidak ada. Hapus `.next`.
 - **Ganti `OPENAI_EMBED_MODEL`** → wajib ingest ulang semua dokumen. Dimensi vektor di skema = 1536.
 - **Reset kata sandi lewat email** → free tier Supabase dibatasi 2 email/jam, dan URL pengalihan harus di-whitelist di Dashboard.
+- **Vercel mendeteksi framework "Other"** → Root Directory belum diisi `web`. Root repo tidak punya `package.json`, jadi Vercel tidak menemukan Next.js.
+- **Deploy jalan tapi semua data gagal dimuat** → `NEXT_PUBLIC_SUPABASE_URL` belum ada saat build, jadi host Supabase tidak masuk `connect-src` di CSP. Isi variabelnya lalu deploy ulang.
 
 ---
 
