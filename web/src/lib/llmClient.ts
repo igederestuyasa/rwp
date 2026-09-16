@@ -9,8 +9,14 @@
 //    pemanggil (route /api/asisten, script ingest) tidak berubah.
 //
 // ⚠️ JANGAN import file ini dari komponen client — berisi OPENAI_API_KEY.
-//    Hanya dipakai di Route Handler (server) & script Node.
+//    `import "server-only"` menjadikannya galat BUILD, bukan sekadar
+//    peringatan komentar. Hanya dipakai di Route Handler (server).
+//
+// Galat provider: body respons OpenAI (bisa memuat detail akun/kuota)
+// hanya masuk log server; pemanggil menerima Error generik
+// "Layanan AI gagal (HTTP <status>)." yang aman diteruskan.
 // ============================================================
+import "server-only";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
@@ -40,7 +46,8 @@ export async function embed(text: string): Promise<number[]> {
     body: JSON.stringify({ model: EMBED_MODEL, input: text }),
   });
   if (!res.ok) {
-    throw new Error(`Embedding gagal (${res.status}): ${await res.text()}`);
+    console.error("[llm] embed gagal", res.status, await res.text());
+    throw new Error(`Layanan AI gagal (HTTP ${res.status}).`);
   }
   const json = await res.json();
   return json.data[0].embedding as number[];
@@ -61,7 +68,8 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
     body: JSON.stringify({ model: EMBED_MODEL, input: texts }),
   });
   if (!res.ok) {
-    throw new Error(`Embedding batch gagal (${res.status}): ${await res.text()}`);
+    console.error("[llm] embedBatch gagal", res.status, await res.text());
+    throw new Error(`Layanan AI gagal (HTTP ${res.status}).`);
   }
   const json = (await res.json()) as { data: { index: number; embedding: number[] }[] };
   if (!Array.isArray(json.data) || json.data.length !== texts.length) {
@@ -92,7 +100,8 @@ export async function chat(
     }),
   });
   if (!res.ok) {
-    throw new Error(`Chat gagal (${res.status}): ${await res.text()}`);
+    console.error("[llm] chat gagal", res.status, await res.text());
+    throw new Error(`Layanan AI gagal (HTTP ${res.status}).`);
   }
   const json = await res.json();
   return (json.choices[0].message.content ?? "") as string;

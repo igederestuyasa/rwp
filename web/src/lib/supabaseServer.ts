@@ -5,7 +5,11 @@
 // jadi RLS tetap berlaku sebagai user tsb — BUKAN service_role.
 // Dipakai di Route Handler untuk: verifikasi user + query rag_chunks
 // (retrieval asisten RWP). Tidak menyentuh data laporan (§9.3).
+//
+// ⚠️ Server-only. `import "server-only"` membuat build GAGAL bila berkas ini
+// tersasar ke komponen client.
 // ============================================================
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

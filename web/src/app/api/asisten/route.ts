@@ -10,6 +10,7 @@
 // hanya ada di server (file ini & llmClient), tak pernah ke client.
 // ============================================================
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { embed, chat, type ChatMessage } from "@/lib/llmClient";
 import { supabaseWithToken } from "@/lib/supabaseServer";
 
@@ -45,6 +46,26 @@ Cara kamu menjawab:
 - JANGAN pernah menilai atau memutuskan apakah sebuah laporan terbukti. Itu wewenang tim HC. Kamu hanya menjelaskan kebijakan.
 - Jangan tebak-tebak dan jangan minta data pribadi. Kamu tidak punya akses ke isi laporan siapa pun, dan tidak boleh berpura-pura punya.`;
 
+/** Body POST /api/asisten. userRole selain "admin" diperlakukan sebagai karyawan. */
+const SkemaTanya = z.object({
+  question: z.string().trim().min(1).max(2000),
+  userName: z.string().max(200).optional().nullable(),
+  userRole: z
+    .string()
+    .optional()
+    .transform((r): "admin" | "karyawan" => (r === "admin" ? "admin" : "karyawan")),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().max(10_000),
+      }),
+    )
+    .max(50)
+    .optional()
+    .default([]),
+});
+
 interface MatchedChunk {
   source_doc: string;
   chunk_text: string;
@@ -77,33 +98,26 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Sesi tidak valid. Silakan login ulang." }, { status: 401 });
     }
 
-    // 2. Validasi input
-    const body = await req.json().catch(() => ({}));
-    const question = String(body.question ?? "").trim();
-    const firstName = body.userName
-      ? String(body.userName).slice(0, 50).split(" ")[0]
-      : null;
-    const userRole = body.userRole === "admin" ? "admin" : "karyawan";
-    const history: ChatMessage[] = Array.isArray(body.history)
-      ? body.history
-          .filter(
-            (m: unknown): m is ChatMessage =>
-              !!m &&
-              typeof (m as ChatMessage).content === "string" &&
-              (m as ChatMessage).content.length <= 10_000 &&
-              ["user", "assistant"].includes((m as ChatMessage).role),
-          )
-          .slice(-MAX_HISTORY)
-      : [];
-    if (!question) {
-      return Response.json({ error: "Pertanyaan kosong." }, { status: 400 });
+    // 2. Validasi input (§9.4) — bentuk dicek skema, bukan diasumsikan.
+    const json: unknown = await req.json().catch(() => null);
+    const hasil = SkemaTanya.safeParse(json);
+    if (!hasil.success) {
+      const soalPertanyaan = hasil.error.issues.find((i) => i.path[0] === "question");
+      if (soalPertanyaan?.code === "too_big") {
+        return Response.json(
+          { error: "Pertanyaan terlalu panjang (maks. 2000 karakter)." },
+          { status: 400 },
+        );
+      }
+      if (soalPertanyaan) {
+        return Response.json({ error: "Pertanyaan kosong." }, { status: 400 });
+      }
+      console.error("/api/asisten input tidak valid:", hasil.error.issues);
+      return Response.json({ error: "Isi permintaan tidak valid." }, { status: 400 });
     }
-    if (question.length > 2000) {
-      return Response.json(
-        { error: "Pertanyaan terlalu panjang (maks. 2000 karakter)." },
-        { status: 400 },
-      );
-    }
+    const { question, userName, userRole } = hasil.data;
+    const firstName = userName ? userName.slice(0, 50).split(" ")[0] : null;
+    const history: ChatMessage[] = hasil.data.history.slice(-MAX_HISTORY);
 
     // 3. Embed pertanyaan
     const queryEmbedding = await embed(question);

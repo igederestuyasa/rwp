@@ -9,7 +9,9 @@
 // seperti dokumen lain. source_doc memakai awalan "kebijakan:" agar satu
 // kebijakan selalu memetakan ke satu dokumen korpus (upsert).
 // ============================================================
-import { jsonError, otorisasiAdmin } from "@/lib/korpusServer";
+import {
+  SkemaDariKebijakan, bacaBody, jsonError, otorisasiAdmin,
+} from "@/lib/korpusServer";
 
 export const runtime = "nodejs";
 
@@ -18,21 +20,16 @@ export async function POST(req: Request) {
   if (ctx instanceof Response) return ctx;
   const { supabase, userId } = ctx;
 
-  let body: { policyId?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return jsonError("Body harus JSON.", 400);
-  }
-  const policyId = typeof body.policyId === "string" ? body.policyId.trim() : "";
-  if (!policyId) return jsonError("Sertakan policyId.", 400);
+  const body = await bacaBody(req, SkemaDariKebijakan);
+  if (body instanceof Response) return body;
+  const { policyId } = body;
 
   const { data: pol, error: polErr } = await supabase
     .from("policies")
     .select("id, title, markdown")
     .eq("id", policyId)
     .maybeSingle<{ id: string; title: string; markdown: string | null }>();
-  if (polErr) return jsonError(`Gagal membaca kebijakan: ${polErr.message}`, 500);
+  if (polErr) return jsonError("Gagal membaca kebijakan.", 500, polErr);
   if (!pol) return jsonError("Kebijakan tidak ditemukan.", 404);
   if (!pol.markdown || pol.markdown.trim().length === 0) {
     return jsonError("Kebijakan ini belum punya isi Markdown untuk dipelajari asisten.", 422);
@@ -55,7 +52,7 @@ export async function POST(req: Request) {
     )
     .select()
     .single();
-  if (error) return jsonError(`Gagal mendaftarkan dokumen: ${error.message}`, 500);
+  if (error) return jsonError("Gagal mendaftarkan dokumen.", 500, error);
 
   return Response.json({ dokumen: data });
 }

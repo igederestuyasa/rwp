@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       contentType: CONTENT_TYPE[hasil.jenis],
       upsert: false,
     });
-  if (upErr) return jsonError(`Gagal menyimpan berkas: ${upErr.message}`, 500);
+  if (upErr) return jsonError("Gagal menyimpan berkas.", 500, upErr);
 
   const { data, error: insErr } = await supabase
     .from("corpus_documents")
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   if (insErr) {
     // Jangan tinggalkan berkas tanpa catatan — bersihkan lagi.
     await supabase.storage.from(KORPUS_BUCKET).remove([storagePath]);
-    return jsonError(`Gagal mencatat dokumen: ${insErr.message}`, 500);
+    return jsonError("Gagal mencatat dokumen.", 500, insErr);
   }
 
   return Response.json({ dokumen: data }, { status: 201 });

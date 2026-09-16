@@ -7,9 +7,17 @@
 // sini adalah lapis LOGIKA (§9.2) supaya pemanggil tanpa hak mendapat 403
 // yang jelas, bukan galat RLS yang membingungkan.
 //
-// ⚠️ Server-only. Jangan diimpor dari komponen client.
+// Galat: pesan ke klien selalu teks tetap berbahasa awam. Pesan mentah
+// PostgREST/Storage/OpenAI (nama tabel, constraint, body provider) hanya
+// masuk log server lewat `jsonError(..., detail)` — tidak pernah ke browser
+// dan tidak pernah tersimpan di corpus_documents.pesan_error.
+//
+// ⚠️ Server-only. `import "server-only"` membuat build GAGAL bila berkas ini
+// tersasar ke komponen client — bukan sekadar peringatan komentar.
 // ============================================================
+import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { supabaseWithToken } from "@/lib/supabaseServer";
 
 /** Bucket privat tempat berkas korpus disimpan — sama dengan /api/policy-pdf. */
@@ -20,9 +28,40 @@ export const KORPUS_PREFIX = "korpus";
 
 export type AdminKonteks = { supabase: SupabaseClient; userId: string };
 
-/** Balasan JSON bergaya seragam untuk seluruh route korpus. */
-export function jsonError(pesan: string, status: number): Response {
+/**
+ * Balasan JSON bergaya seragam untuk seluruh route korpus.
+ * `pesan` dikirim ke klien apa adanya, jadi WAJIB teks tetap berbahasa awam
+ * yang ditulis di kode — bukan turunan `.message` dari provider.
+ * `detail` (galat asli PostgREST/Storage/OpenAI) hanya dicatat ke log server
+ * supaya tim teknis tetap bisa menelusuri sebabnya.
+ */
+export function jsonError(pesan: string, status: number, detail?: unknown): Response {
+  if (detail !== undefined) console.error("[korpus]", pesan, detail);
   return Response.json({ error: pesan }, { status });
+}
+
+/**
+ * Galat yang pesannya SENGAJA ditulis untuk dibaca admin di UI /korpus
+ * (mis. "dokumen warisan tanpa berkas sumber"). Pemanggil boleh meneruskan
+ * `.message`-nya ke klien dan menyimpannya di pesan_error; galat lain harus
+ * diganti teks awam lewat `pesanGalatAwam`.
+ * `penyebab` menampung galat asli (bila ada) untuk log server saja.
+ */
+export class GalatAdmin extends Error {
+  readonly penyebab?: unknown;
+  constructor(pesan: string, penyebab?: unknown) {
+    super(pesan);
+    this.name = "GalatAdmin";
+    this.penyebab = penyebab;
+  }
+}
+
+/**
+ * Pesan yang aman ditampilkan ke admin: GalatAdmin diteruskan apa adanya,
+ * galat lain (PostgREST, Storage, OpenAI, bug) diganti `bawaan`.
+ */
+export function pesanGalatAwam(e: unknown, bawaan: string): string {
+  return e instanceof GalatAdmin ? e.message : bawaan;
 }
 
 /**
@@ -75,26 +114,70 @@ export type SumberDokumen = Pick<DokumenKorpus, "jenis" | "storage_path" | "poli
  * Ambil teks sumber dokumen sesuai jenisnya. Dipakai dua tempat — ingest
  * (untuk dipecah) dan pembaca isi di /korpus (untuk ditampilkan) — supaya
  * yang dilihat admin persis teks yang dipelajari asisten.
- * Melempar Error bila sumbernya tidak ada (dokumen warisan skrip lama).
+ * Selalu melempar GalatAdmin: pesannya teks tetap yang boleh ditampilkan,
+ * galat asli PostgREST/Storage (bila ada) ikut di `penyebab` untuk log.
  */
 export async function ambilTeksSumber(supabase: SupabaseClient, dok: SumberDokumen): Promise<string> {
   if (dok.jenis === "kebijakan") {
-    if (!dok.policy_id) throw new Error("Dokumen kebijakan tidak menunjuk ke policy_id.");
+    if (!dok.policy_id) throw new GalatAdmin("Dokumen kebijakan ini tidak terhubung ke kebijakan mana pun.");
     const { data, error } = await supabase
       .from("policies")
       .select("title, markdown")
       .eq("id", dok.policy_id)
       .maybeSingle<{ title: string; markdown: string | null }>();
-    if (error) throw new Error(`Gagal membaca kebijakan: ${error.message}`);
-    if (!data?.markdown) throw new Error("Kebijakan tidak punya isi Markdown.");
+    if (error) throw new GalatAdmin("Gagal membaca kebijakan sumber.", error);
+    if (!data) throw new GalatAdmin("Kebijakan sumber tidak ditemukan.");
+    if (!data.markdown) throw new GalatAdmin("Kebijakan tidak punya isi Markdown.");
     // Sama seperti build-corpus.mjs dulu: judul jadi heading utama, supaya
     // hasil chunk handbook tidak berubah dibanding jalur skrip lama.
     return `# ${data.title}\n\n${data.markdown.trim()}\n`;
   }
   if (!dok.storage_path) {
-    throw new Error("Dokumen ini hasil skrip lama tanpa berkas sumber — tidak bisa diproses ulang, hanya bisa dihapus.");
+    throw new GalatAdmin("Dokumen ini hasil skrip lama tanpa berkas sumber — tidak bisa diproses ulang, hanya bisa dihapus.");
   }
   const { data, error } = await supabase.storage.from(KORPUS_BUCKET).download(dok.storage_path);
-  if (error || !data) throw new Error(`Gagal membaca berkas sumber: ${error?.message ?? "kosong"}`);
+  if (error || !data) {
+    throw new GalatAdmin("Gagal membaca berkas sumber dari penyimpanan.", error ?? "unduhan kosong");
+  }
   return await data.text();
+}
+
+
+// ============================================================
+// Skema input (§9.4) — yang datang dari jaringan adalah `unknown`, tipe
+// TypeScript tidak berlaku saat runtime. Semua route korpus memvalidasi
+// lewat sini sebelum nilai dipakai.
+// ============================================================
+
+/** Id baris corpus_documents (uuid). */
+export const SkemaIdDokumen = z.uuid();
+
+export const SkemaIngest = z.object({
+  id: z.uuid(),
+  mulaiDari: z.number().int().min(0).optional().default(0),
+});
+
+/** policies.id bertipe text (mis. "rwp"), bukan uuid. */
+export const SkemaDariKebijakan = z.object({
+  policyId: z.string().trim().min(1).max(100),
+});
+
+/**
+ * Baca body JSON dan validasi dengan skema. Mengembalikan data yang sudah
+ * bertipe, atau Response 400 yang siap dikembalikan. Detail pelanggaran
+ * hanya ke log server, bukan ke klien.
+ */
+export async function bacaBody<T extends z.ZodType>(
+  req: Request,
+  skema: T,
+): Promise<z.output<T> | Response> {
+  let json: unknown;
+  try {
+    json = await req.json();
+  } catch {
+    return jsonError("Body harus JSON.", 400);
+  }
+  const hasil = skema.safeParse(json);
+  if (!hasil.success) return jsonError("Isi permintaan tidak valid.", 400, hasil.error.issues);
+  return hasil.data;
 }

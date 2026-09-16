@@ -11,7 +11,9 @@
 // §9.3: hanya menyentuh corpus_documents, policies, rag_chunks, dan bucket
 // korpus — tidak pernah reports, report_messages, atau identitas.
 // ============================================================
-import { ambilTeksSumber, jsonError, otorisasiAdmin, type DokumenKorpus } from "@/lib/korpusServer";
+import {
+  SkemaIdDokumen, ambilTeksSumber, jsonError, otorisasiAdmin, pesanGalatAwam, type DokumenKorpus,
+} from "@/lib/korpusServer";
 
 export const runtime = "nodejs";
 
@@ -24,25 +26,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { supabase } = ctx;
 
   const { id } = await params;
-  if (!id) return jsonError("Sertakan id dokumen.", 400);
+  if (!SkemaIdDokumen.safeParse(id).success) return jsonError("Id dokumen tidak valid.", 400);
 
   const { data: dok, error: dokErr } = await supabase
     .from("corpus_documents")
     .select("id, jenis, source_doc, storage_path, policy_id")
     .eq("id", id)
     .maybeSingle<Baris>();
-  if (dokErr) return jsonError(`Gagal membaca dokumen: ${dokErr.message}`, 500);
+  if (dokErr) return jsonError("Gagal membaca dokumen.", 500, dokErr);
   if (!dok) return jsonError("Dokumen tidak ditemukan.", 404);
 
   // Teks asli. Dokumen warisan tidak punya sumber — itu bukan galat, cukup null.
-  // Kalau sumbernya ADA tetapi gagal dibaca, pesannya dikirim agar admin tahu.
+  // Kalau sumbernya ADA tetapi gagal dibaca, pesan awamnya dikirim agar admin
+  // tahu; galat aslinya hanya ke log server.
   let teks: string | null = null;
   let galatTeks: string | null = null;
   if (dok.jenis === "kebijakan" || dok.storage_path) {
     try {
       teks = await ambilTeksSumber(supabase, dok);
     } catch (e) {
-      galatTeks = e instanceof Error ? e.message : "Gagal membaca teks sumber.";
+      console.error("[korpus] teks sumber gagal dibaca", e);
+      galatTeks = pesanGalatAwam(e, "Gagal membaca teks sumber.");
     }
   }
 
@@ -52,7 +56,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     .eq("source_doc", dok.source_doc)
     .order("chunk_index", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
-  if (chunkErr) return jsonError(`Gagal membaca potongan: ${chunkErr.message}`, 500);
+  if (chunkErr) return jsonError("Gagal membaca potongan teks.", 500, chunkErr);
 
   const potongan = ((baris ?? []) as BarisPotongan[]).map((b) => ({
     indeks: b.chunk_index,
