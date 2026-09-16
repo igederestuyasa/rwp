@@ -4,22 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  ChevronLeft,
-  CheckCircle2,
-  ShieldAlert,
+  ArrowLeft,
+  CheckCircle,
+  ShieldWarning,
   Paperclip,
   X,
-  RotateCcw,
+  ArrowCounterClockwise,
   Eye,
-  Pencil,
-  FileText,
-  Tag,
-  Calendar,
-  MapPin,
-  User,
-  Lock,
-  MessageSquare,
-} from "lucide-react";
+  PencilSimple,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { EvidenceList } from "@/components/EvidenceList";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
@@ -27,13 +21,18 @@ import { STATUS_TRANSITIONS } from "@/lib/constants";
 import type { Status } from "@/lib/types";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { validateFiles, formatRejections, ACCEPT_ATTR } from "@/lib/fileValidation";
-import { StatusPill } from "@/components/ui/StatusPill";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Textarea } from "@/components/ui/Field";
-import { Panel, HeroChip, MetaField, SlaBox } from "@/components/ui/Panel";
-import { DotGrid } from "@/components/ui/DotGrid";
+import { Panel, MetaField, SlaBox } from "@/components/ui/Panel";
+import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
+import { KosongHC } from "@/components/hc/KosongHC";
 import { ChatThread } from "@/components/ChatThread";
 import { Timeline } from "@/components/Timeline";
+
+// Tombol kembali — bentuk pil sekunder, target sentuh 44px (§Aksesibilitas).
+const KELAS_KEMBALI =
+  "inline-flex h-11 items-center gap-2 rounded-full border border-garis-kuat bg-kartu px-4 " +
+  "text-bantu font-semibold text-tinta transition-colors duration-150 hover:bg-latar";
 
 export default function TiketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,128 +41,74 @@ export default function TiketDetailPage() {
   const report = reports.find((r) => r.id === id);
 
   if (user?.role !== "admin") {
-    return (
-      <div className="text-sm text-slate-500">Halaman ini hanya untuk admin HC.</div>
-    );
+    return <div className="text-bantu text-redup">Halaman ini hanya untuk admin HC.</div>;
   }
 
   if (!report) {
     return (
       <div>
-        <Link
-          href="/tiket"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Daftar Tiket
+        <Link href="/tiket" className={KELAS_KEMBALI}>
+          <ArrowLeft size={16} aria-hidden />
+          Kembali ke daftar tiket
         </Link>
-        <div className="mt-4 flex flex-col items-center justify-center rounded-2xl bg-white py-16 text-center shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-          <FileText className="h-12 w-12 text-slate-300 dark:text-slate-600" />
-          <p className="mt-3 text-sm font-medium text-slate-400 dark:text-slate-500">
-            Tiket tidak ditemukan.
-          </p>
+        <div className="mt-8">
+          <KosongHC
+            judul="Tiket tidak ditemukan"
+            ajakan="Tautannya mungkin keliru atau tiket sudah tidak tersedia. Buka daftar tiket untuk memilih tiket lain."
+            aksiLabel="Buka daftar tiket"
+            href="/tiket"
+          />
         </div>
       </div>
     );
   }
 
-  const Icon = ShieldAlert;
-
   return (
     <div>
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#5B5BD6] via-[#7A7AE6] to-[#9B5BD6] p-5 text-white sm:p-6">
-        {/* Dekorasi latar */}
-        <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-6 h-80 w-80 rounded-full bg-violet-400/25 blur-3xl" />
-        <div className="pointer-events-none absolute right-1/3 top-0 h-40 w-40 rounded-full bg-blue-300/20 blur-2xl" />
-        <DotGrid />
+      {/* ── Pembuka halaman: tombol kembali, judul, lalu teks pendukung ── */}
+      <header>
+        <Link href="/tiket" className={`pembuka-masuk ${KELAS_KEMBALI}`}>
+          <ArrowLeft size={16} aria-hidden />
+          Kembali ke daftar tiket
+        </Link>
 
-        <div className="relative">
-          {/* Tombol kembali */}
-          <Link
-            href="/tiket"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-blue-100 ring-1 ring-white/20 backdrop-blur-sm transition-colors hover:bg-white/25"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Daftar Tiket
-          </Link>
+        <h1
+          className="pembuka-masuk mt-6 line-clamp-2 break-words text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta"
+          style={{ animationDelay: "60ms" }}
+        >
+          {report.judul}
+        </h1>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Ikon tiket */}
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-              <Icon className="h-5 w-5 text-white" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              {/* Nomor + badge + status */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs font-semibold text-blue-200">
-                  {report.ticketNo}
-                </span>
-                <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
-                  {report.status}
-                </span>
-                {report.resolvedAt && (
-                  <HeroChip
-                    icon={<CheckCircle2 className="h-3 w-3" />}
-                    label="Selesai"
-                  />
-                )}
-              </div>
-
-              {/* Judul */}
-              <h1 className="mt-1 text-lg font-bold leading-snug sm:text-xl">
-                {report.judul}
-              </h1>
-            </div>
-          </div>
+        <div
+          className="pembuka-masuk mt-3 flex flex-wrap items-center gap-3"
+          style={{ animationDelay: "110ms" }}
+        >
+          <span className="tabular text-bantu font-medium text-redup">{report.ticketNo}</span>
+          <StatusLabelLaporan status={report.status} />
         </div>
-      </div>
+      </header>
 
-      {/* ── Konten 2 kolom ── */}
-      <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        {/* ── Kolom kiri: detail + tindak lanjut ── */}
-        <div className="space-y-5">
-          {/* Detail tiket */}
-          <Panel title="Detail Tiket">
-            {/* Grid meta */}
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-5">
-              <MetaField
-                label="Lampiran"
-                value={`${report.evidenceCount} berkas`}
-                icon={<Paperclip className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
-              />
-              <MetaField
-                label="Kategori"
-                value={report.kategori ?? "-"}
-                icon={<Tag className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
-              />
+      {/* ── Isi: detail & tindakan di kiri, riwayat & percakapan di kanan ── */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-6">
+          <Panel title="Detail laporan">
+            {/* Baris metadata — hanya baris yang ada datanya. */}
+            <dl className="grid gap-y-3">
+              {report.evidenceCount > 0 && (
+                <MetaField label="Lampiran" value={`${report.evidenceCount} berkas`} />
+              )}
+              {report.kategori && <MetaField label="Kategori" value={report.kategori} />}
               {report.tanggalKejadian && (
                 <MetaField
-                  label="Tgl. kejadian"
+                  label="Tanggal kejadian"
                   value={formatDate(report.tanggalKejadian)}
-                  icon={<Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
                 />
               )}
-              {report.lokasi && (
-                <MetaField
-                  label="Lokasi"
-                  value={report.lokasi}
-                  icon={<MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
-                />
-              )}
-              {report.terlapor && (
-                <MetaField
-                  label="Terlapor"
-                  value={report.terlapor}
-                  icon={<User className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
-                />
-              )}
+              {report.lokasi && <MetaField label="Lokasi" value={report.lokasi} />}
+              {report.terlapor && <MetaField label="Terlapor" value={report.terlapor} />}
               <MetaField
                 label="Pelaporan"
                 value={report.isAnonymous ? "Anonim" : "Teridentifikasi"}
-                icon={<Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
               />
             </dl>
 
@@ -173,61 +118,51 @@ export default function TiketDetailPage() {
               <SlaBox
                 label="Waktu selesai"
                 value={
-                  report.resolvedAt
-                    ? formatDateTime(report.resolvedAt)
-                    : "Belum selesai"
+                  report.resolvedAt ? formatDateTime(report.resolvedAt) : "Belum selesai"
                 }
                 muted={!report.resolvedAt}
               />
             </div>
 
             {/* Deskripsi / Kronologi */}
-            <div className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-700/60">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Kronologi
-              </p>
-              <p className="text-sm leading-relaxed text-slate-600 break-words dark:text-slate-300">
+            <div className="mt-6 border-t border-garis pt-5">
+              <p className="mb-2 text-bantu font-semibold text-tinta">Kronologi</p>
+              <p className="break-words text-isi leading-relaxed text-redup">
                 {report.kronologi}
               </p>
             </div>
 
             {/* Bukti pelaporan */}
             {report.evidence && report.evidence.length > 0 && (
-              <div className="mt-5 border-t border-slate-100 pt-5 dark:border-slate-700/60">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+              <div className="mt-5 border-t border-garis pt-5">
+                <p className="mb-3 text-bantu font-semibold text-tinta">
                   Bukti pelaporan ({report.evidence.length} berkas)
                 </p>
                 <EvidenceList files={report.evidence} />
               </div>
             )}
 
-            {/* Identitas pelapor */}
-            <div className="mt-5 border-t border-slate-100 pt-5 dark:border-slate-700/60">
+            {/* Identitas pelapor — gating tetap seperti semula (CLAUDE.md §9.1):
+                hanya admin ber-canEscalate yang melihat nama & NIK pelapor. */}
+            <div className="mt-5 border-t border-garis pt-5">
               {!report.isAnonymous && report.reporterName ? (
                 user?.canEscalate ? (
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    <p className="mb-1.5 text-bantu font-semibold text-tinta">
                       Identitas pelapor
                     </p>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                      {report.reporterName}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      NIK {report.reporterNik}
-                    </p>
+                    <p className="text-bantu font-medium text-tinta">{report.reporterName}</p>
+                    <p className="text-mikro text-redup">NIK {report.reporterNik}</p>
                   </div>
                 ) : (
-                  <p className="text-xs italic text-slate-400 dark:text-slate-500">
+                  <p className="text-bantu text-redup">
                     Identitas pelapor hanya dapat dilihat oleh admin dengan wewenang eskalasi.
                   </p>
                 )
               ) : report.isAnonymous ? (
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Pelapor memilih{" "}
-                  <span className="font-medium text-slate-600 dark:text-slate-300">
-                    anonim
-                  </span>{" "}
-                  — identitas tersembunyi.
+                <p className="text-bantu text-redup">
+                  Pelapor memilih <span className="font-medium text-tinta">anonim</span> —
+                  identitas tersembunyi.
                 </p>
               ) : null}
             </div>
@@ -235,7 +170,7 @@ export default function TiketDetailPage() {
 
           {/* Tindak lanjut status — key memaksa remount (reset form) saat
               tiket atau statusnya berganti, menggantikan reset via useEffect. */}
-          <Panel title="Tindak Lanjut Status">
+          <Panel title="Tindak lanjut status">
             <StatusTindakLanjut
               key={`${report.id}:${report.status}`}
               report={report}
@@ -245,31 +180,20 @@ export default function TiketDetailPage() {
 
           {/* Eskalasi identitas — hanya untuk laporan anonim, oleh admin superior */}
           {user?.canEscalate && report.isAnonymous && (
-            <Panel title="Eskalasi Identitas">
+            <Panel title="Eskalasi identitas">
               <Escalation reportId={report.id} />
             </Panel>
           )}
         </div>
 
-        {/* ── Kolom kanan: riwayat + chat ── */}
-        <div className="space-y-5">
-          <Panel title="Riwayat Status">
+        <div className="space-y-6">
+          <Panel title="Riwayat status">
             <Timeline report={report} hideEscalation={false} />
           </Panel>
 
-          <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700/60">
-            <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 dark:border-slate-700/60">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#5B5BD6] to-[#9B5BD6] text-white shadow-sm">
-                <MessageSquare className="h-3.5 w-3.5" />
-              </div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Komunikasi dengan Pelapor
-              </h2>
-            </div>
-            <div className="px-4 py-5 sm:px-6">
-              <ChatThread reportId={report.id} />
-            </div>
-          </div>
+          <Panel title="Komunikasi dengan pelapor">
+            <ChatThread reportId={report.id} />
+          </Panel>
         </div>
       </div>
     </div>
@@ -349,8 +273,8 @@ function StatusTindakLanjut({
 
   if (done) {
     return (
-      <p className="flex items-center gap-1.5 text-sm text-emerald-600">
-        <CheckCircle2 className="h-4 w-4" /> Status diperbarui.
+      <p className="flex items-center gap-1.5 text-bantu font-medium text-sukses">
+        <CheckCircle size={16} aria-hidden /> Status diperbarui.
       </p>
     );
   }
@@ -359,43 +283,35 @@ function StatusTindakLanjut({
   if (phase === "review") {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3 dark:border-slate-700 dark:bg-slate-700/40">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-            Ringkasan perubahan
-          </p>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-500 dark:text-slate-400">Status baru:</span>
-            <StatusPill status={to as Status} />
+        <div className="space-y-3 rounded-[var(--radius-kartu)] border border-garis bg-latar p-4">
+          <p className="text-bantu font-semibold text-tinta">Ringkasan perubahan</p>
+          <div className="flex items-center gap-2 text-bantu">
+            <span className="text-redup">Status baru:</span>
+            <StatusLabelLaporan status={to as Status} />
           </div>
-          <div className="text-sm">
-            <span className="text-slate-500 dark:text-slate-400">Catatan: </span>
-            <span className="text-slate-700 dark:text-slate-300">
-              {note.trim() || (
-                <span className="italic text-slate-400 dark:text-slate-500">
-                  Tidak ada
-                </span>
-              )}
+          <div className="text-bantu">
+            <span className="text-redup">Catatan: </span>
+            <span className="text-tinta">
+              {note.trim() || <span className="text-redup">Tidak ada</span>}
             </span>
           </div>
-          <div className="text-sm">
-            <span className="text-slate-500 dark:text-slate-400">Lampiran: </span>
+          <div className="text-bantu">
+            <span className="text-redup">Lampiran: </span>
             {files.length === 0 ? (
-              <span className="italic text-slate-400 dark:text-slate-500">
-                Tidak ada
-              </span>
+              <span className="text-redup">Tidak ada</span>
             ) : (
-              <span className="text-slate-700 dark:text-slate-300">
+              <span className="text-tinta">
                 {files.length} file ({files.map((f) => f.name).join(", ")})
               </span>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => setPhase("form")} disabled={saving}>
-            <Pencil className="h-4 w-4" /> Edit
+            <PencilSimple size={16} aria-hidden /> Edit
           </Button>
           <Button onClick={apply} disabled={saving}>
-            <CheckCircle2 className="h-4 w-4" />
+            <CheckCircle size={16} aria-hidden />
             {saving ? "Menerapkan…" : "Konfirmasi & Terapkan"}
           </Button>
         </div>
@@ -405,7 +321,7 @@ function StatusTindakLanjut({
 
   // ── Fase form ──
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <Field label="Ubah status ke">
         <Select
           value={to}
@@ -429,13 +345,12 @@ function StatusTindakLanjut({
       {/* Lampiran */}
       {to && (
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
-            Lampiran{" "}
-            <span className="font-normal text-slate-400">(opsional)</span>
+          <p className="mb-2 text-bantu font-semibold text-tinta">
+            Lampiran <span className="font-normal text-redup">(opsional)</span>
           </p>
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-3 text-sm text-slate-500 transition-colors hover:border-slate-400 hover:bg-slate-100/50 hover:text-slate-700 dark:border-slate-600 dark:bg-slate-700/30 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:bg-slate-700/60 dark:hover:text-slate-200">
-            <Paperclip className="h-4 w-4 shrink-0" />
-            Klik untuk melampirkan file
+          <label className={`${KELAS_KEMBALI} cursor-pointer`}>
+            <Paperclip size={16} aria-hidden />
+            Lampirkan file
             <input
               type="file"
               multiple
@@ -445,11 +360,11 @@ function StatusTindakLanjut({
             />
           </label>
           {files.length > 0 && (
-            <ul className="mt-2 space-y-1.5">
+            <ul className="mt-3 space-y-2">
               {files.map((f, i) => (
                 <li
                   key={i}
-                  className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-100 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600"
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-input)] border border-garis bg-latar px-3 py-2.5 text-bantu text-tinta"
                 >
                   <span className="truncate">{f.name}</span>
                   <button
@@ -457,9 +372,10 @@ function StatusTindakLanjut({
                     onClick={() =>
                       setFiles((prev) => prev.filter((_, idx) => idx !== i))
                     }
-                    className="ml-2 shrink-0 text-slate-400 hover:text-rose-500"
+                    aria-label={`Hapus lampiran ${f.name}`}
+                    className="shrink-0 text-redup transition-colors duration-150 hover:text-merah"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X size={16} aria-hidden />
                   </button>
                 </li>
               ))}
@@ -468,9 +384,14 @@ function StatusTindakLanjut({
         </div>
       )}
 
-      {err && <p className="text-sm text-rose-600">{err}</p>}
+      {err && (
+        <p className="flex items-start gap-1.5 text-bantu text-merah">
+          <WarningCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
+          {err}
+        </p>
+      )}
       <Button onClick={toReview}>
-        <Eye className="h-4 w-4" /> Tinjau Perubahan
+        <Eye size={16} aria-hidden /> Tinjau perubahan
       </Button>
     </div>
   );
@@ -517,37 +438,27 @@ function ReopenSection({
 
   if (done) {
     return (
-      <p className="flex items-center gap-1.5 text-sm text-emerald-600">
-        <CheckCircle2 className="h-4 w-4" /> Tiket dibuka kembali & tercatat di log.
+      <p className="flex items-center gap-1.5 text-bantu font-medium text-sukses">
+        <CheckCircle size={16} aria-hidden /> Tiket dibuka kembali & tercatat di log.
       </p>
     );
   }
 
   return (
     <div>
-      <p className="text-sm text-slate-400 dark:text-slate-500">
-        Status{" "}
-        <span className="font-medium text-slate-600 dark:text-slate-300">
-          {report.status}
-        </span>{" "}
-        sudah final.
+      <p className="text-bantu text-redup">
+        Status <span className="font-medium text-tinta">{report.status}</span> sudah final.
       </p>
       {!open ? (
-        <button
-          onClick={() => setOpen(true)}
-          className="mt-3 flex items-center gap-1.5 text-sm font-medium text-amber-600 hover:text-amber-700"
-        >
-          <RotateCcw className="h-4 w-4" /> Buka kembali tiket ini
-        </button>
+        <Button variant="secondary" className="mt-4" onClick={() => setOpen(true)}>
+          <ArrowCounterClockwise size={16} aria-hidden /> Buka kembali tiket ini
+        </Button>
       ) : (
-        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-3 dark:border-amber-800 dark:bg-amber-900/20">
-          <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
-            Buka kembali tiket
-          </p>
-          <p className="text-xs text-amber-600 dark:text-amber-500">
-            Tiket akan dikembalikan ke status{" "}
-            <strong>Sedang Ditinjau</strong>. Alasan wajib diisi dan akan
-            dicatat di riwayat tiket.
+        <div className="mt-4 space-y-3 rounded-[var(--radius-kartu)] border border-garis bg-latar p-4">
+          <p className="text-bantu font-semibold text-tinta">Buka kembali tiket</p>
+          <p className="text-bantu text-redup">
+            Tiket akan dikembalikan ke status <strong className="font-semibold text-tinta">Sedang Ditinjau</strong>.
+            Alasan wajib diisi dan akan dicatat di riwayat tiket.
           </p>
           <Field label="Alasan membuka kembali">
             <Textarea
@@ -560,8 +471,13 @@ function ReopenSection({
               placeholder="Mis. Ditemukan informasi baru yang perlu ditindaklanjuti…"
             />
           </Field>
-          {err && <p className="text-sm text-rose-600">{err}</p>}
-          <div className="flex gap-2">
+          {err && (
+            <p className="flex items-start gap-1.5 text-bantu text-merah">
+              <WarningCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
+              {err}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"
               onClick={() => {
@@ -573,8 +489,8 @@ function ReopenSection({
               Batal
             </Button>
             <Button variant="danger" onClick={reopen} disabled={saving}>
-              <RotateCcw className="h-4 w-4" />
-              {saving ? "Membuka…" : "Buka Kembali"}
+              <ArrowCounterClockwise size={16} aria-hidden />
+              {saving ? "Membuka…" : "Buka kembali"}
             </Button>
           </div>
         </div>
@@ -610,22 +526,19 @@ function Escalation({ reportId }: { reportId: string }) {
 
   return (
     <div>
-      <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-        Tindakan ini dicatat di audit log (siapa, kapan, alasan). Gunakan hanya
-        untuk eskalasi resmi sesuai prosedur.
+      <p className="mb-4 text-bantu text-redup">
+        Tindakan ini dicatat di audit log (siapa, kapan, alasan). Gunakan hanya untuk
+        eskalasi resmi sesuai prosedur.
       </p>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-500 dark:hover:text-amber-400"
-      >
-        <ShieldAlert className="h-4 w-4" />
+      <Button variant="secondary" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <ShieldWarning size={16} aria-hidden />
         Buka identitas pelapor
-      </button>
+      </Button>
       {open && (
-        <div className="mt-3 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-100 dark:bg-amber-900/20 dark:ring-amber-800">
+        <div className="mt-4 rounded-[var(--radius-kartu)] border border-garis bg-latar p-4">
           {!revealed ? (
             <>
-              <div>
+              <Field label="Alasan eskalasi" required>
                 <Textarea
                   rows={2}
                   value={reason}
@@ -636,11 +549,14 @@ function Escalation({ reportId }: { reportId: string }) {
                   placeholder="Alasan eskalasi (wajib)…"
                   disabled={loading}
                 />
-              </div>
+              </Field>
               {err && (
-                <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{err}</p>
+                <p className="mt-2 flex items-start gap-1.5 text-bantu text-merah">
+                  <WarningCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
+                  {err}
+                </p>
               )}
-              <div className="mt-3">
+              <div className="mt-4">
                 <Button
                   variant="danger"
                   size="sm"
@@ -652,9 +568,8 @@ function Escalation({ reportId }: { reportId: string }) {
               </div>
             </>
           ) : (
-            <p className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-amber-900 ring-1 ring-amber-200 dark:bg-slate-800 dark:text-amber-200 dark:ring-amber-700">
-              Identitas pelapor: {revealed}. Pembukaan ini telah dicatat di
-              audit log.
+            <p className="rounded-[var(--radius-input)] border border-garis bg-kartu px-3 py-2.5 text-bantu font-medium text-tinta">
+              Identitas pelapor: {revealed}. Pembukaan ini telah dicatat di audit log.
             </p>
           )}
         </div>
