@@ -152,9 +152,8 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
 - **Bangun bertahap.** Setiap langkah harus meninggalkan `npx tsc --noEmit` dan
   `npm run build` hijau.
 - **Verifikasi sebelum mengklaim selesai.** `tsc`, `eslint src`, `build`. Baseline
-  lint saat ini: **0 error**, 6 warning (impor `DotGrid`/`ThemeSegment` tak terpakai,
-  satu `eslint-disable` yang sudah tidak perlu). Jangan menambah error baru — CI
-  memakai `eslint src` sebagai gate yang menggagalkan build.
+  lint saat ini: **0 error, 0 warning**. Jangan menambah keduanya — CI memakai
+  `eslint src` sebagai gate yang menggagalkan build.
 - **Jangan sentuh mekanika yang sudah terbukti** tanpa alasan: form status dua
   tahap di `tiket/[id]`, `Timeline`, `ChatThread`, `storage.ts`, pola flag-gated
   di `auth.tsx`/`store.tsx`.
@@ -264,9 +263,10 @@ Ini pilot di free tier untuk pembuktian konsep. Sebelum menampung laporan RWP as
   render), `useIdleTimeout.ts` (tulis ref saat render + `setState` sinkron di
   effect), `ChatRatingDashboard.tsx` dan `kebijakan/page.tsx` (`setState` sinkron
   di effect). `eslint src` sekarang exit 0.
-- Sisa 6 warning lint yang belum disentuh: impor `DotGrid` tak terpakai di
-  `bantuan`/`laporan`/`pengaturan`/`profil`, `ThemeSegment` tak terpakai di
-  `pengaturan`, dan satu `eslint-disable` mubazir di `login/page.tsx`.
+- ~~Sisa 6 warning lint~~ — **SELESAI** saat redesign HC Panel. Impor `DotGrid`
+  yang menganggur hilang bersama berkasnya, `ThemeSegment` akhirnya dirender
+  sebagai pemilih tema yang berfungsi, dan `eslint-disable` mubazir di
+  `login/page.tsx` ikut hilang saat berkas itu ditulis ulang.
 - `MIN_SIMILARITY` di `api/asisten/route.ts` masih warisan korpus lama.
 - Notifikasi belum realtime (data dari Supabase, status baca/dismiss di localStorage).
 - Belum ada dukungan PDF/DOCX di skrip ingest — konversi manual dulu ke `.md`.
