@@ -1,14 +1,15 @@
-import { STATUS_STYLES } from "@/lib/constants";
 import type { Status } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// Dark mode equivalents untuk tiap status
-const STATUS_DARK_STYLES: Record<Status, string> = {
-  Diterima:          "dark:bg-blue-900/30 dark:text-blue-400 dark:ring-blue-700",
-  "Sedang Ditinjau": "dark:bg-amber-900/30 dark:text-amber-400 dark:ring-amber-700",
-  "Tindak Lanjut":   "dark:bg-orange-900/30 dark:text-orange-400 dark:ring-orange-700",
-  Selesai:           "dark:bg-emerald-900/30 dark:text-emerald-400 dark:ring-emerald-700",
-  Ditutup:           "dark:bg-slate-700/50 dark:text-slate-400 dark:ring-slate-600",
+// Label status sistem UI "HC Panel" (docs/DESIGN.md §Komponen):
+// pil tinggi 22, padding 0 8, 12px 600, border garis.
+// Hanya status data yang berwarna, sisanya netral (§Batas gaya).
+const NADA_STATUS: Record<Status, string> = {
+  Diterima: "text-redup",
+  "Sedang Ditinjau": "text-peringatan",
+  "Tindak Lanjut": "text-peringatan",
+  Selesai: "text-sukses",
+  Ditutup: "text-redup",
 };
 
 export function StatusPill({
@@ -21,10 +22,9 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5",
-        "text-xs font-semibold ring-1 ring-inset",
-        STATUS_STYLES[status],
-        STATUS_DARK_STYLES[status],
+        "inline-flex h-[22px] items-center whitespace-nowrap rounded-full",
+        "border border-garis bg-kartu px-2 text-mikro font-semibold",
+        NADA_STATUS[status],
         className,
       )}
     >

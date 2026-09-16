@@ -1,3 +1,5 @@
+"use client";
+
 import {
   useState,
   useRef,
@@ -7,49 +9,61 @@ import {
   type TextareaHTMLAttributes,
   type ReactNode,
 } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { CaretDown, Check, WarningCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
+// Input form sistem UI "HC Panel" (docs/DESIGN.md §Komponen):
+// label di atas 14px 600, tinggi 44, radius 12, border garis-kuat, latar kartu.
+// Hover: border redup. Fokus: border tinta + cincin 1px tinta. Tanpa bayangan.
 const baseControl =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 " +
-  "placeholder:text-slate-400 shadow-sm transition-colors " +
-  "focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 " +
-  "dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 " +
-  "dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:ring-blue-900/30";
+  "w-full rounded-[var(--radius-input)] border border-garis-kuat bg-kartu px-3 " +
+  "text-bantu text-tinta placeholder:text-redup transition-colors duration-150 " +
+  "hover:border-redup focus:border-tinta focus:outline-none focus:ring-1 focus:ring-tinta " +
+  "disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Field({
   label,
   required,
   hint,
+  error,
   children,
 }: {
   label: string;
   required?: boolean;
   hint?: string;
+  /** Pesan kesalahan opsional — tampil di bawah kontrol dengan ikon peringatan. */
+  error?: string;
   children: ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+      <span className="mb-2 block text-bantu font-semibold text-tinta">
         {label}
-        {required && <span className="text-rose-500"> *</span>}
+        {required && <span className="text-merah"> *</span>}
       </span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">{hint}</span>}
+      {hint && <span className="mt-2 block text-bantu text-redup">{hint}</span>}
+      {error && (
+        <span className="mt-2 flex items-start gap-1.5 text-bantu text-merah">
+          <WarningCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          {error}
+        </span>
+      )}
     </label>
   );
 }
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(baseControl, className)} {...props} />;
+  return <input className={cn(baseControl, "h-11", className)} {...props} />;
 }
 
 export function Textarea({
   className,
   ...props
 }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  // Textarea boleh lebih tinggi dari 44, radius/border/fokus tetap sama.
   return (
-    <textarea className={cn(baseControl, "resize-y leading-relaxed", className)} {...props} />
+    <textarea className={cn(baseControl, "resize-y py-3 leading-relaxed", className)} {...props} />
   );
 }
 
@@ -59,13 +73,13 @@ export function Select({
   ...props
 }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={cn(baseControl, "cursor-pointer pr-8", className)} {...props}>
+    <select className={cn(baseControl, "h-11 cursor-pointer pr-8", className)} {...props}>
       {children}
     </select>
   );
 }
 
-// ── GlassSelect — custom dropdown dengan glass texture ──
+// ── GlassSelect — dropdown kustom (native <option> tidak bisa ditata) ──
 export interface GlassSelectOption {
   value: string;
   label: string;
@@ -109,31 +123,33 @@ export function GlassSelect({
 
   return (
     <div ref={ref} className={cn("relative", className)}>
-      {/* Trigger */}
+      {/* Pemicu */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className={cn(
           baseControl,
-          "flex cursor-pointer items-center justify-between pr-3 text-left",
-          !selected && "text-slate-400 dark:text-slate-500",
-          open && "border-blue-400 ring-2 ring-blue-100 dark:border-blue-500 dark:ring-blue-900/30",
+          "flex h-11 cursor-pointer items-center justify-between pr-3 text-left",
+          !selected && "text-redup",
+          open && "border-tinta ring-1 ring-tinta",
         )}
       >
         <span className="truncate">
           {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown
+        <CaretDown
           className={cn(
-            "ml-2 h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 dark:text-slate-500",
+            "ml-2 h-4 w-4 shrink-0 text-redup transition-transform duration-200",
             open && "rotate-180",
           )}
+          aria-hidden
         />
       </button>
 
-      {/* Dropdown panel */}
+      {/* Panel dropdown — popover boleh berbayangan */}
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-xl border border-slate-200/80 bg-white/95 shadow-xl backdrop-blur-xl dark:border-slate-600/40 dark:bg-slate-800/95">
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-[var(--radius-kartu)] border border-garis bg-kartu shadow-[var(--shadow-popover)]">
           <ul className="max-h-64 overflow-y-auto py-1.5">
             {options.map((opt) => {
               const isSelected = opt.value === value;
@@ -143,14 +159,14 @@ export function GlassSelect({
                     type="button"
                     onClick={() => { onChange(opt.value); setOpen(false); }}
                     className={cn(
-                      "flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors",
+                      "flex w-full items-center justify-between px-4 py-2.5 text-left text-bantu transition-colors duration-150",
                       isSelected
-                        ? "bg-blue-50 font-semibold text-blue-700 dark:bg-white/15 dark:text-white"
-                        : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white",
+                        ? "bg-latar font-semibold text-tinta"
+                        : "text-redup hover:bg-latar hover:text-tinta",
                     )}
                   >
                     <span>{opt.label}</span>
-                    {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-blue-500 dark:text-blue-300" />}
+                    {isSelected && <Check className="h-4 w-4 shrink-0 text-tinta" aria-hidden />}
                   </button>
                 </li>
               );

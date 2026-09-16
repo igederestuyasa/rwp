@@ -1,12 +1,13 @@
 import { type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
+// Kartu sistem UI "HC Panel": radius 16, border garis, latar kartu, TANPA
+// bayangan (docs/DESIGN.md §Prinsip "satu elevasi").
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-200/60 bg-white/75 shadow-sm backdrop-blur-sm",
-        "dark:border-slate-700 dark:bg-slate-800 dark:shadow-slate-900/50",
+        "rounded-[var(--radius-kartu)] border border-garis bg-kartu",
         className,
       )}
       {...props}
@@ -15,9 +16,10 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 }
 
 export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5 sm:p-6", className)} {...props} />;
+  return <div className={cn("p-4 sm:p-6", className)} {...props} />;
 }
 
+/** Judul bagian (h2) — keterangannya selalu ditumpuk di bawah judul. */
 export function SectionTitle({
   title,
   subtitle,
@@ -29,8 +31,10 @@ export function SectionTitle({
 }) {
   return (
     <div className={cn("mb-1", className)}>
-      <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-      {subtitle && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
+      <h2 className="text-bagian font-bold leading-[1.25] tracking-[-0.02em] text-tinta">
+        {title}
+      </h2>
+      {subtitle && <p className="mt-1 text-bantu text-redup">{subtitle}</p>}
     </div>
   );
 }

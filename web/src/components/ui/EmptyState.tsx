@@ -1,16 +1,13 @@
-import { Inbox } from "lucide-react";
-
-/** Tampilan kosong untuk daftar tiket (admin & karyawan) — teks via props. */
+/**
+ * Tampilan kosong untuk daftar tiket (admin & karyawan) — teks via props.
+ * Kotak border putus-putus menandai "belum ada isinya" (docs/DESIGN.md
+ * §Komponen "Keadaan kosong").
+ */
 export function EmptyState({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-5 py-16 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500">
-        <Inbox className="h-7 w-7" />
-      </div>
-      <div>
-        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{title}</p>
-        <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{subtitle}</p>
-      </div>
+    <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-kartu)] border border-dashed border-garis-putus px-6 py-8 text-center">
+      <p className="text-subjudul font-bold text-tinta">{title}</p>
+      <p className="max-w-[44ch] text-bantu text-redup">{subtitle}</p>
     </div>
   );
 }
