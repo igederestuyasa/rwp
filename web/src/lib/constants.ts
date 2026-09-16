@@ -1,4 +1,8 @@
 // Konstanta domain RWP (placeholder — wajib divalidasi tim HC sebelum produksi).
+import {
+  PhoneCall, WhatsappLogo, CalendarCheck, EnvelopeSimple, Lifebuoy, ClipboardText,
+  type Icon,
+} from "@phosphor-icons/react";
 import type { Status, SubRole } from "./types";
 
 // ===== Brand =====
@@ -11,6 +15,8 @@ export const ORG_NAME = "PT Hutama Karya (Persero)";
 export type PsikologiChannelType = "tel" | "whatsapp" | "url" | "email";
 
 export interface PsikologiChannel {
+  /** Ikon semantik kanal — set tetap, jadi tidak memakai ikon generatif. */
+  icon: Icon;
   id: string;
   label: string;
   desc: string;
@@ -23,6 +29,7 @@ export interface PsikologiChannel {
 export const PSIKOLOGI_CHANNELS: PsikologiChannel[] = [
   {
     id: "careline",
+    icon: PhoneCall,
     label: "Careline 24/7",
     desc: "Layanan telepon konseling darurat tersedia 24 jam sehari, 7 hari seminggu.",
     type: "tel",
@@ -32,6 +39,7 @@ export const PSIKOLOGI_CHANNELS: PsikologiChannel[] = [
   },
   {
     id: "whatsapp",
+    icon: WhatsappLogo,
     label: "WhatsApp Chat",
     desc: "Immediate support melalui WhatsApp untuk respons cepat kapan pun Anda butuhkan.",
     type: "whatsapp",
@@ -41,6 +49,7 @@ export const PSIKOLOGI_CHANNELS: PsikologiChannel[] = [
   },
   {
     id: "daftar-internal",
+    icon: CalendarCheck,
     label: "Psikolog Internal Perusahaan",
     desc: "Daftar sesi konseling dengan psikolog internal PT Hutama Karya melalui tautan berikut.",
     type: "url",
@@ -49,6 +58,7 @@ export const PSIKOLOGI_CHANNELS: PsikologiChannel[] = [
   },
   {
     id: "email-internal",
+    icon: EnvelopeSimple,
     label: "Email Psikolog Internal",
     desc: "Kirim pertanyaan atau jadwal konseling melalui email psikolog internal perusahaan.",
     type: "email",
@@ -57,6 +67,7 @@ export const PSIKOLOGI_CHANNELS: PsikologiChannel[] = [
   },
   {
     id: "naluri",
+    icon: Lifebuoy,
     label: "Psikolog Eksternal — Naluri",
     desc: "Akses platform wellness Naluri, mitra resmi PT Hutama Karya untuk Employee Assistance Program (EAP).",
     type: "url",
@@ -65,6 +76,7 @@ export const PSIKOLOGI_CHANNELS: PsikologiChannel[] = [
   },
   {
     id: "screening",
+    icon: ClipboardText,
     label: "Screening Kondisi Psikologis",
     desc: "Coba asesmen mandiri kondisi psikologis kamu secara anonim. Hasil hanya untuk keperluan pribadi.",
     type: "url",

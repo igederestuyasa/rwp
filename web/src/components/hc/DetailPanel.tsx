@@ -9,6 +9,7 @@
 
 import * as React from "react";
 import { GenerativeIcon } from "@/components/hc/GenerativeIcon";
+import type { Icon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export type DetailBaris = {
@@ -17,6 +18,8 @@ export type DetailBaris = {
 };
 
 export type DetailItem = {
+  /** Ikon Phosphor khusus untuk daftar berisi tetap (lihat ItemCard). */
+  ikon?: Icon;
   nama: string;
   kategori?: string;
   status?: React.ReactNode;
@@ -78,7 +81,13 @@ export function DetailPanel({
           className="flex min-h-[460px] flex-col pt-6"
           style={{ animation: "panelMasuk 240ms var(--ease-keluar) both" }}
         >
-          <GenerativeIcon nama={item.nama} size={96} rencana={item.rencana} />
+          {item.ikon ? (
+            <span className="flex h-24 w-24 items-center justify-center rounded-[24px] border border-garis bg-latar text-tinta">
+              <item.ikon size={44} aria-hidden="true" />
+            </span>
+          ) : (
+            <GenerativeIcon nama={item.nama} size={96} rencana={item.rencana} />
+          )}
 
           {(item.kategori || item.status) && (
             <div className="mt-6 flex flex-wrap items-center gap-2 text-[14px] leading-[1.35] font-medium text-redup">

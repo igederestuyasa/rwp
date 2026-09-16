@@ -135,6 +135,7 @@ function PsikologiIsi({ onBack }: { onBack?: () => void }) {
                 href={ch.href}
                 className="h-full"
                 nama={ch.label}
+                ikon={ch.icon}
                 deskripsi={ch.desc}
                 status={ch.badge ? <StatusLabel>{ch.badge}</StatusLabel> : undefined}
                 indeks={i}
@@ -156,6 +157,7 @@ function PsikologiIsi({ onBack }: { onBack?: () => void }) {
             terpilih
               ? {
                   nama: terpilih.label,
+                  ikon: terpilih.icon,
                   kategori: JENIS_KANAL[terpilih.type],
                   status: terpilih.badge ? (
                     <StatusLabel>{terpilih.badge}</StatusLabel>

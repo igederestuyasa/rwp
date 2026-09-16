@@ -5,29 +5,34 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { ASSISTANT_NAME } from "@/lib/constants";
 import { SearchField } from "@/components/hc/SearchField";
+import { BookOpen, NotePencil, ListChecks, HandHeart } from "@phosphor-icons/react";
 import { ItemCard, ItemCardGrid } from "@/components/hc/ItemCard";
 
-// Empat pintu masuk karyawan. Nama item sekaligus penentu ikon generatif.
+// Empat pintu masuk karyawan. Set tetap, jadi memakai ikon semantik (§Batas gaya).
 const PINTU = [
   {
     nama: "Kebijakan RWP",
+    ikon: BookOpen,
     href: "/kebijakan",
     deskripsi:
       "Baca handbook Respectful Workplace Policy: definisi, contoh kasus, dan sanksinya.",
   },
   {
     nama: "Lapor insiden",
+    ikon: NotePencil,
     href: "/lapor",
     deskripsi:
       "Laporkan pelecehan, diskriminasi, atau perundungan. Bisa anonim, kerahasiaannya dijaga.",
   },
   {
     nama: "Lacak laporan",
+    ikon: ListChecks,
     href: "/laporan",
     deskripsi: "Pantau status penanganan dan berkomunikasi dengan admin RWP.",
   },
   {
     nama: "Layanan psikologi",
+    ikon: HandHeart,
     href: "/psikologi",
     deskripsi:
       "Konseling profesional dan careline 24 jam, tanpa perlu membuat laporan lebih dulu.",
@@ -98,6 +103,7 @@ export default function BerandaPage() {
             <ItemCard
               key={pintu.href}
               nama={pintu.nama}
+              ikon={pintu.ikon}
               deskripsi={pintu.deskripsi}
               indeks={i}
               onBuka={() => router.push(pintu.href)}

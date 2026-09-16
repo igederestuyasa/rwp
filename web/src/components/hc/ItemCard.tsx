@@ -9,6 +9,7 @@
 import * as React from "react";
 import { ArrowUpRight } from "@phosphor-icons/react";
 import { GenerativeIcon } from "@/components/hc/GenerativeIcon";
+import type { Icon } from "@phosphor-icons/react";
 import { StatusLabel } from "@/components/hc/StatusLabel";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,13 @@ export type ItemCardProps = {
   status?: React.ReactNode;
   /** Item belum tersedia: bingkai putus-putus, nama redup, ikon versi rencana. */
   rencana?: boolean;
+  /**
+   * Ikon Phosphor khusus, menggantikan ikon generatif. Hanya untuk daftar
+   * BERISI TETAP yang namanya sudah dikenal orang (kanal kontak, pintu
+   * beranda) — lihat §Batas gaya di docs/DESIGN.md. Daftar yang isinya
+   * datang dari data tetap memakai ikon generatif.
+   */
+  ikon?: Icon;
   /** Tanda terpilih (hanya bermakna saat panel detail terlihat). */
   terpilih?: boolean;
   /** Urutan item dalam daftar — menunda animasi muat ikon. */
@@ -42,6 +50,7 @@ export function ItemCard({
   deskripsi,
   status,
   rencana = false,
+  ikon: IkonKhusus,
   terpilih = false,
   indeks = 0,
   onPilih,
@@ -81,7 +90,18 @@ export function ItemCard({
   const isi = (
     <>
       <span style={{ gridArea: "ikon" }} className="flex items-start">
-        <GenerativeIcon nama={nama} size={40} rencana={rencana} indeks={indeks} />
+        {IkonKhusus ? (
+          <span
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border",
+              rencana ? "border-garis-putus text-redup" : "border-garis bg-latar text-tinta",
+            )}
+          >
+            <IkonKhusus size={20} aria-hidden="true" />
+          </span>
+        ) : (
+          <GenerativeIcon nama={nama} size={40} rencana={rencana} indeks={indeks} />
+        )}
       </span>
 
       <span

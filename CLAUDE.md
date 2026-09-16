@@ -140,7 +140,8 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   disimpan di `localStorage` key `rwp_theme`. **Tailwind v4**: `darkMode: "selector"`
   wajib lewat `web/tailwind.config.js` yang direferensikan `@config` di `globals.css`.
 - Komponen bersama di `components/ui/`: `Button`, `Card`, `Field` (termasuk
-  `GlassSelect`), `StatusPill`, `Panel`, `DotGrid`, `EmptyState`. Pakai ulang,
+  `GlassSelect`), `StatusPill`, `Panel`, `EmptyState`, plus komponen HC Panel di `components/hc/`.
+  Pakai ulang,
   jangan bikin varian baru.
 - Prefix `rwp_` pada key `localStorage` dan nama bucket memang disengaja.
 

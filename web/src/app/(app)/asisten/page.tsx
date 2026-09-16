@@ -11,8 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {
   Robot, PaperPlaneRight, Sparkle, FileText, ShieldWarning, Trash,
-  Plus, ChatCircle, Star, X, ClockCounterClockwise, CircleNotch,
-} from "@phosphor-icons/react";
+  Plus, ChatCircle, Star, X, ClockCounterClockwise, CircleNotch, HandHeart, NotePencil } from "@phosphor-icons/react";
 import { MOCK_QA_ANSWER, MOCK_QA_SOURCES } from "@/lib/mock";
 import { ASSISTANT_NAME } from "@/lib/constants";
 import { USE_MOCK, getSupabase } from "@/lib/supabaseClient";
@@ -43,16 +42,18 @@ const SUGGESTIONS = [
   "Apa itu kebijakan RWP?",
 ];
 
-// Jalur lain untuk karyawan — nama item sekaligus penentu ikon generatif,
-// sengaja sama dengan beranda supaya ikonnya konsisten di seluruh app.
+// Jalur lain untuk karyawan — set tetap, jadi memakai ikon semantik yang
+// sama persis dengan pintu di beranda supaya konsisten di seluruh app.
 const JALUR_LAIN = [
   {
     nama: "Layanan psikologi",
+    ikon: HandHeart,
     href: "/psikologi",
     deskripsi: "Konseling profesional dan careline 24 jam, tanpa perlu membuat laporan lebih dulu.",
   },
   {
     nama: "Lapor insiden",
+    ikon: NotePencil,
     href: "/lapor",
     deskripsi: "Laporkan pelanggaran RWP lewat jalur rahasia. Bisa anonim, kerahasiaannya dijaga.",
   },
@@ -568,6 +569,7 @@ function IsiAsisten() {
                   <ItemCard
                     key={j.href}
                     nama={j.nama}
+                    ikon={j.ikon}
                     deskripsi={j.deskripsi}
                     indeks={i}
                     onBuka={() => router.push(j.href)}

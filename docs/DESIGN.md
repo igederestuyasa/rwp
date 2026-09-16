@@ -109,7 +109,18 @@ Satu keluarga huruf: Plus Jakarta Sans (variable, subset latin). Angka di tabel 
 - Tabel: header 12px 600 redup, baris 14px setinggi 48, pemisah 1px antarbaris, angka rata kanan, hover baris berlatar latar. Baris terpilih berlatar latar dengan teks 600, dan isinya tampil di panel detail.
 - Keadaan kosong: kotak border putus-putus radius 16, padding 32 dan 24, judul 18px 700, satu kalimat ajakan, satu tombol aksi.
 - Kaki halaman: garis atas 1px, padding 24 0 48, teks 14px redup (tanggal diperbarui, kontak).
-- Ikon UI: Phosphor Icons gaya regular. Ikon item selalu dari GenerativeIcon.
+- Ikon UI: Phosphor Icons gaya regular.
+- Ikon item ditentukan oleh SIFAT DAFTARNYA:
+  - **Daftar yang isinya datang dari data** dan namanya bisa apa saja (dokumen
+    kebijakan, laporan insiden, karyawan, proses) memakai **GenerativeIcon**.
+    Tidak ada yang bisa memilihkan ikon untuk nama yang belum diketahui, dan
+    ikon generatif menjamin satu nama selalu tampil sama di semua app HC.
+  - **Daftar berisi TETAP dan sudah dikenal orang** (kanal kontak, pintu masuk
+    di beranda) memakai **ikon Phosphor semantik**, dilewatkan lewat prop `ikon`
+    pada ItemCard dan DetailPanel. Untuk set seperti ini ikon generatif justru
+    merugikan: bentuk abstrak terbaca sebagai placeholder, sementara logo
+    WhatsApp atau gagang telepon langsung dikenali tanpa membaca labelnya.
+    Ikon yang sama harus dipakai untuk entri yang sama di seluruh app.
 - Logo (warna lewat token):
   `<svg viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="tinta"/><path d="M9 9H24A15 15 0 0 1 9 24Z" fill="latar"/><circle cx="31.5" cy="16.5" r="7.5" fill="merah-ikon"/><rect x="9" y="24" width="15" height="15" fill="latar"/><path d="M24 39H39A7.5 7.5 0 0 0 24 39Z" fill="latar"/></svg>`
 
@@ -230,7 +241,8 @@ Aturan render (viewBox `0 0 48 48`, `aria-hidden`):
 - Aksen lembut dan ramp data hanya untuk peruntukan di §Token warna, bukan dekorasi bebas.
 - Status ditunjukkan dengan label teks.
 - Keterangan judul selalu di bawah judul.
-- Ikon hanya dari Phosphor, GenerativeIcon, dan logo.
+- Ikon hanya dari Phosphor, GenerativeIcon, dan logo. Pilihan antara Phosphor
+  semantik dan GenerativeIcon mengikuti aturan sifat daftar di §Komponen.
 
 ## Checklist selesai
 - [ ] Semua warna, ukuran huruf, spasi, radius, dan bayangan berasal dari token.
@@ -239,7 +251,8 @@ Aturan render (viewBox `0 0 48 48`, `aria-hidden`):
 - [ ] Setiap layar punya tepat satu elemen berbayangan.
 - [ ] h1 maksimal 2 baris, dan pembuka maksimal 4 elemen teks.
 - [ ] Layar daftar entitas memakai pola daftar-detail dan tetap berfungsi di HP.
-- [ ] Ikon item berasal dari GenerativeIcon dengan fungsi yang sama persis.
+- [ ] Daftar berbasis data memakai GenerativeIcon dengan fungsi yang sama persis,
+      dan daftar berisi tetap memakai ikon Phosphor semantik yang seragam antar app.
 - [ ] Mode terang, gelap, reduced motion, dan navigasi keyboard sudah dicek.
 - [ ] Tidak ada scroll horizontal di lebar 320, 390, 768, 1024, dan 1440.
 - [ ] Semua fitur lama masih berjalan.
