@@ -3,20 +3,22 @@
 import { useState, type ReactNode, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bell, Shield, Info,
-  ChevronRight, Lock, LogOut, Sun, Moon, Layers,
-  Ticket, MessageSquare, MailCheck, AlertCircle, CheckCircle2, X,
+  Bell, ShieldCheck, Info,
+  CaretRight, Lock, SignOut, Sun, Moon,
+  Ticket, ChatText, EnvelopeSimple, WarningCircle, CheckCircle, X,
   Globe, Fingerprint,
-} from "lucide-react";
+  type Icon,
+} from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { getSupabase, USE_MOCK } from "@/lib/supabaseClient";
 import { APP_NAME, ORG_NAME, SUB_ROLE_LABEL } from "@/lib/constants";
-import { Card, CardBody } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
+import { StatusLabel } from "@/components/hc/StatusLabel";
+import { Logo } from "@/components/hc/Logo";
 import { cn } from "@/lib/utils";
-import { DotGrid } from "@/components/ui/DotGrid";
 
 // ===== Notifikasi settings =====
 const NOTIF_KEY = "rwp_notif_settings";
@@ -33,47 +35,42 @@ type PassState = "idle" | "loading" | "success" | "error";
 
 // ─── Sub-komponen ─────────────────────────────────────────────────────────────
 
-type IconTone = "slate" | "blue" | "indigo" | "amber" | "emerald" | "violet" | "rose";
-const ICON_TONE: Record<IconTone, string> = {
-  slate:   "bg-slate-100 text-slate-500 dark:bg-slate-700/80 dark:text-slate-400",
-  blue:    "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
-  indigo:  "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400",
-  amber:   "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
-  emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
-  violet:  "bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400",
-  rose:    "bg-rose-50 text-rose-500 dark:bg-rose-900/30 dark:text-rose-400",
-};
+/** Bingkai ikon netral — satu rupa untuk semua baris (§Batas gaya: satu aksen). */
+function IkonBaris({ icon: Ikon }: { icon: Icon }) {
+  return (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-input)] border border-garis bg-latar text-tinta">
+      <Ikon size={18} aria-hidden="true" />
+    </span>
+  );
+}
 
 function SettingRow({
-  icon: Icon, iconTone = "slate", label, desc, action, onClick, last = false,
+  icon, label, desc, action, onClick, last = false, aksiLebar = false,
 }: {
-  icon: React.ElementType; iconTone?: IconTone; label: string; desc?: string;
+  icon: Icon; label: string; desc?: string;
   action?: ReactNode; onClick?: () => void; last?: boolean;
+  /** Aksi lebar (mis. pemilih tema) turun ke baris sendiri di layar sempit. */
+  aksiLebar?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-4 px-5 py-4 transition-colors",
-        !last && "border-b border-slate-100 dark:border-slate-700/60",
-        onClick && "cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/30",
+        "flex min-h-[64px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 transition-colors duration-150 sm:px-6",
+        !last && "border-b border-garis",
+        onClick && "cursor-pointer hover:bg-latar",
       )}
       onClick={onClick}
       role={onClick ? "button" : undefined}
     >
-      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", ICON_TONE[iconTone])}>
-        <Icon className="h-[18px] w-[18px]" />
-      </div>
+      <IkonBaris icon={icon} />
       <div className="min-w-0 flex-1">
-        <p className={cn(
-          "text-sm font-medium",
-          iconTone === "rose" ? "text-rose-600 dark:text-rose-400" : "text-slate-800 dark:text-slate-200",
-        )}>
-          {label}
-        </p>
-        {desc && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{desc}</p>}
+        <p className="text-bantu font-semibold text-tinta">{label}</p>
+        {desc && <p className="mt-0.5 text-bantu text-redup">{desc}</p>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
-      {onClick && !action && <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />}
+      {action && (
+        <div className={cn("shrink-0", aksiLebar && "basis-full sm:basis-auto")}>{action}</div>
+      )}
+      {onClick && !action && <CaretRight size={16} aria-hidden="true" className="shrink-0 text-redup" />}
     </div>
   );
 }
@@ -81,52 +78,59 @@ function SettingRow({
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
+      type="button"
       role="switch" aria-checked={checked}
       onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
       className={cn(
-        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800",
-        checked ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-600",
+        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-150",
+        // Bentuknya 24px, tapi area sentuhnya dilebarkan ke 44px.
+        "after:absolute after:-inset-y-2.5 after:-inset-x-1 after:content-['']",
+        checked ? "bg-tinta" : "bg-garis-kuat",
       )}
     >
       <span className={cn(
-        "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+        "inline-block h-4 w-4 rounded-full bg-kartu transition-transform duration-150",
         checked ? "translate-x-6" : "translate-x-1",
       )} />
     </button>
   );
 }
 
+/** Penanda fitur yang belum tersedia (§Komponen — label "Segera"). */
 function ComingSoon() {
-  return (
-    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-400 dark:bg-slate-700 dark:text-slate-500">
-      Segera
-    </span>
-  );
+  return <StatusLabel>Segera</StatusLabel>;
 }
 
 function ThemeSegment() {
   const { theme, setTheme } = useTheme();
   return (
-    <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-700">
+    <div className="flex gap-1 rounded-full border border-garis bg-latar p-1">
       {([
         { value: "light", label: "Terang", Icon: Sun },
         { value: "dark",  label: "Gelap",  Icon: Moon },
       ] as const).map(({ value, label, Icon }) => (
         <button
-          key={value} onClick={() => setTheme(value)}
+          key={value}
+          type="button"
+          aria-pressed={theme === value}
+          onClick={() => setTheme(value)}
           className={cn(
-            "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all",
+            "flex h-9 items-center gap-1.5 rounded-full px-3 text-bantu font-semibold transition-colors duration-150",
             theme === value
-              ? "bg-white text-slate-800 shadow-sm dark:bg-slate-600 dark:text-slate-100"
-              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+              ? "bg-kartu text-tinta"
+              : "text-redup hover:text-tinta",
           )}
         >
-          <Icon className="h-3.5 w-3.5" /> {label}
+          <Icon size={16} aria-hidden="true" /> {label}
         </button>
       ))}
     </div>
   );
+}
+
+/** Judul kelompok pengaturan (§Kelompok — 14px 650). */
+function GroupTitle({ children }: { children: ReactNode }) {
+  return <h2 className="mb-3 text-bantu font-[650] text-tinta">{children}</h2>;
 }
 
 // ===== Halaman utama =====
@@ -154,7 +158,6 @@ export default function PengaturanPage() {
 
   if (!user) return null;
 
-  const initials = user.nama.split(" ").slice(0, 2).map((s) => s[0]).join("").toUpperCase();
   const roleLabel = user.subRole ? SUB_ROLE_LABEL[user.subRole] : "Karyawan";
 
   function handleLogout() { logout(); router.push("/login"); }
@@ -190,238 +193,225 @@ export default function PengaturanPage() {
   }
 
   return (
-    <div className="space-y-5 pb-4">
+    <div>
+      {/* ── Pembuka layar ── */}
+      <h1
+        className="pembuka-masuk text-balance text-halaman font-bold leading-[1.05] tracking-[-0.04em] text-tinta"
+        style={{ animationDelay: "0ms" }}
+      >
+        Pengaturan
+      </h1>
+      <p
+        className="pembuka-masuk mt-4 max-w-[44ch] text-subjudul leading-[1.5] text-redup"
+        style={{ animationDelay: "60ms" }}
+      >
+        Atur notifikasi, tampilan, dan keamanan akunmu.
+      </p>
 
-      {/* ── Hero Profil ── */}
-      <div className="relative overflow-hidden rounded-[20px] border border-line bg-surface p-6 shadow-sm">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-[200px] w-[200px] rounded-full"
-          style={{ background: "radial-gradient(circle, #C95BC5 0%, transparent 70%)", opacity: 0.12, animation: "hero-ring-1 12s ease-in-out infinite" }} />
-        <div className="pointer-events-none absolute -bottom-[60px] left-1/4 h-[180px] w-[180px] rounded-full"
-          style={{ background: "radial-gradient(circle, #5B5BD6 0%, transparent 70%)", opacity: 0.1, animation: "hero-ring-2 14s ease-in-out infinite" }} />
-        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundImage: "linear-gradient(to right, #5B5BD6, #8A5BD6, #C95BC5)", WebkitMaskImage: "radial-gradient(circle, black 1px, transparent 1px)", maskImage: "radial-gradient(circle, black 1px, transparent 1px)", WebkitMaskSize: "22px 22px", maskSize: "22px 22px", opacity: 0.2, animation: "hero-dots 8s linear infinite" }} />
-
-        <div className="relative flex items-center gap-4">
-          {/* Avatar */}
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold text-white shadow-lg" style={{ background: "linear-gradient(135deg, #5B5BD6, #C95BC5)" }}>
-            {initials}
-          </div>
-
-          {/* Info */}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-lg font-bold leading-tight text-ink">{user.nama}</p>
-            <p className="mt-0.5 truncate text-sm text-ink-secondary">{user.email}</p>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent ring-1 ring-accent/20">
-                {roleLabel}
-              </span>
-              {user.nik && (
-                <span className="rounded-full bg-surface-raised px-2.5 py-0.5 text-xs text-ink-secondary ring-1 ring-line">
-                  NIK {user.nik}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Edit profil */}
-          <button
-            onClick={() => router.push("/profil")}
-            className="shrink-0 self-start rounded-xl border border-line bg-surface-raised px-3.5 py-2 text-xs font-semibold text-ink-secondary transition-colors hover:bg-slate-100 hover:text-ink dark:hover:bg-slate-700"
-          >
-            Edit Profil
-          </button>
-        </div>
-      </div>
-
-      {/* ── Notifikasi — OPSI A: plain uppercase, no decoration ── */}
-      <section>
-        <h2 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          Notifikasi
-        </h2>
+      {/* ── Profil ── */}
+      <section className="pembuka-masuk mt-8" style={{ animationDelay: "110ms" }}>
+        <GroupTitle>Profil</GroupTitle>
         <Card>
-          <CardBody className="p-0">
+          <div className="flex flex-wrap items-center gap-4 p-4 sm:p-6">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-isi font-[650] leading-[1.35] tracking-[-0.01em] text-tinta">
+                {user.nama}
+              </p>
+              <p className="mt-1 truncate text-bantu text-redup">{user.email}</p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <StatusLabel>{roleLabel}</StatusLabel>
+                {user.nik && <StatusLabel>NIK {user.nik}</StatusLabel>}
+              </div>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => router.push("/profil")}>
+              Buka profil
+            </Button>
+          </div>
+        </Card>
+      </section>
+
+      {/* ── Notifikasi ── */}
+      <section className="mt-8">
+        <GroupTitle>Notifikasi</GroupTitle>
+        <Card>
+          <SettingRow
+            icon={ChatText}
+            label="Tiket & pesan baru"
+            desc="Notifikasi saat ada balasan baru pada tiket Anda."
+            action={<Toggle checked={notif.tiketPesan} onChange={(v) => setNotifKey("tiketPesan", v)} />}
+          />
+          <SettingRow
+            icon={Ticket}
+            label="Perubahan status tiket"
+            desc="Notifikasi saat status tiket Anda diperbarui admin."
+            action={<Toggle checked={notif.perubahanStatus} onChange={(v) => setNotifKey("perubahanStatus", v)} />}
+          />
+          {user.role === "admin" && (
             <SettingRow
-              icon={MessageSquare} iconTone="blue"
-              label="Tiket & pesan baru"
-              desc="Notifikasi saat ada balasan baru pada tiket Anda."
-              action={<Toggle checked={notif.tiketPesan} onChange={(v) => setNotifKey("tiketPesan", v)} />}
+              icon={EnvelopeSimple}
+              label="Tiket masuk baru"
+              desc="Notifikasi saat ada tiket baru masuk ke antrean Anda."
+              action={<Toggle checked={notif.tiketMasuk} onChange={(v) => setNotifKey("tiketMasuk", v)} />}
+              last
             />
+          )}
+          {user.role === "karyawan" && (
             <SettingRow
-              icon={Ticket} iconTone="indigo"
-              label="Perubahan status tiket"
-              desc="Notifikasi saat status tiket Anda diperbarui admin."
-              action={<Toggle checked={notif.perubahanStatus} onChange={(v) => setNotifKey("perubahanStatus", v)} />}
+              icon={Bell}
+              label="Notifikasi browser"
+              desc="Tampilkan pop-up notifikasi di browser."
+              action={<ComingSoon />}
+              last
             />
-            {user.role === "admin" && (
-              <SettingRow
-                icon={MailCheck} iconTone="emerald"
-                label="Tiket masuk baru"
-                desc="Notifikasi saat ada tiket baru masuk ke antrean Anda."
-                action={<Toggle checked={notif.tiketMasuk} onChange={(v) => setNotifKey("tiketMasuk", v)} />}
-                last
-              />
-            )}
-            {user.role === "karyawan" && (
-              <SettingRow
-                icon={Bell} iconTone="amber"
-                label="Notifikasi browser"
-                desc="Tampilkan pop-up notifikasi di browser."
-                action={<ComingSoon />}
-                last
-              />
-            )}
-          </CardBody>
+          )}
         </Card>
       </section>
 
       {/* ── Tampilan ── */}
-      <section>
-        <h2 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          Tampilan
-        </h2>
+      <section className="mt-8">
+        <GroupTitle>Tampilan</GroupTitle>
         <Card>
-          <CardBody className="p-0">
-            <SettingRow
-              icon={Sun} iconTone="violet"
-              label="Tema aplikasi"
-              desc="Segera hadir."
-              action={<ComingSoon />}
-            />
-            <SettingRow
-              icon={Globe} iconTone="slate"
-              label="Bahasa"
-              desc="Bahasa Indonesia"
-              action={<ComingSoon />}
-              last
-            />
-          </CardBody>
+          <SettingRow
+            icon={Sun}
+            label="Tema aplikasi"
+            desc="Pilih tampilan terang atau gelap."
+            action={<ThemeSegment />}
+            aksiLebar
+          />
+          <SettingRow
+            icon={Globe}
+            label="Bahasa"
+            desc="Bahasa Indonesia"
+            action={<ComingSoon />}
+            last
+          />
         </Card>
       </section>
 
       {/* ── Keamanan ── */}
-      <section>
-        <h2 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          Keamanan
-        </h2>
+      <section className="mt-8">
+        <GroupTitle>Keamanan</GroupTitle>
         <Card>
-          <CardBody className="p-0">
 
-            {/* Ganti kata sandi — expandable */}
-            <div className="border-b border-slate-100 dark:border-slate-700/60">
-              <div
-                className="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/30"
-                onClick={showPassForm ? closePassForm : openPassForm}
-                role="button"
-              >
-                <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", ICON_TONE.emerald)}>
-                  <Lock className="h-[18px] w-[18px]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Ganti kata sandi</p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Perbarui kata sandi akun Anda.</p>
-                </div>
-                <ChevronRight className={cn(
-                  "h-4 w-4 shrink-0 text-slate-300 transition-transform duration-200 dark:text-slate-600",
-                  showPassForm && "rotate-90",
-                )} />
+          {/* Ganti kata sandi — expandable */}
+          <div className="border-b border-garis">
+            <button
+              type="button"
+              className="flex w-full min-h-[64px] items-center gap-4 px-4 py-4 text-left transition-colors duration-150 hover:bg-latar sm:px-6"
+              onClick={showPassForm ? closePassForm : openPassForm}
+              aria-expanded={showPassForm}
+            >
+              <IkonBaris icon={Lock} />
+              <div className="min-w-0 flex-1">
+                <p className="text-bantu font-semibold text-tinta">Ganti kata sandi</p>
+                <p className="mt-0.5 text-bantu text-redup">Perbarui kata sandi akun Anda.</p>
               </div>
+              <CaretRight
+                size={16}
+                aria-hidden="true"
+                className={cn(
+                  "shrink-0 text-redup transition-transform duration-200 [transition-timing-function:var(--ease-standar)]",
+                  showPassForm && "rotate-90",
+                )}
+              />
+            </button>
 
-              {showPassForm && (
-                <div className="animate-in fade-in slide-in-from-top-1 border-t border-slate-100 bg-slate-50/60 px-5 pb-5 pt-4 duration-150 dark:border-slate-700/60 dark:bg-slate-700/20">
-                  {passState === "success" ? (
-                    <div className="flex items-start gap-3 rounded-xl bg-blue-50 px-4 py-3.5 ring-1 ring-blue-100 dark:bg-blue-900/20 dark:ring-blue-800/60">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Kata sandi berhasil diubah!</p>
-                        <p className="mt-0.5 text-xs text-blue-600 dark:text-blue-400">Gunakan kata sandi baru kamu saat masuk berikutnya.</p>
-                      </div>
-                      <button onClick={closePassForm} className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300">
-                        <X className="h-4 w-4" />
-                      </button>
+            {showPassForm && (
+              <div className="animate-in border-t border-garis bg-latar px-4 pb-5 pt-4 sm:px-6">
+                {passState === "success" ? (
+                  <div className="flex items-start gap-3 rounded-[var(--radius-input)] border border-garis bg-kartu px-4 py-3.5">
+                    <CheckCircle size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-sukses" />
+                    <div className="flex-1">
+                      <p className="text-bantu font-semibold text-tinta">Kata sandi berhasil diubah</p>
+                      <p className="mt-0.5 text-bantu text-redup">Gunakan kata sandi baru kamu saat masuk berikutnya.</p>
                     </div>
-                  ) : (
-                    <form onSubmit={handleChangePass} className="space-y-3">
-                      {[
-                        { label: "Kata sandi saat ini", value: currentPass, set: setCurrentPass, placeholder: "••••••••", auto: "current-password" },
-                        { label: "Kata sandi baru",      value: newPass,     set: setNewPass,     placeholder: "Min. 8 karakter", auto: "new-password" },
-                        { label: "Konfirmasi kata sandi baru", value: confirmPass, set: setConfirmPass, placeholder: "Ketik ulang kata sandi baru", auto: "new-password" },
-                      ].map(({ label, value, set, placeholder, auto }) => (
-                        <div key={label}>
-                          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{label}</label>
-                          <Input
-                            type="password" placeholder={placeholder} value={value}
-                            onChange={(e) => set(e.target.value)} autoComplete={auto}
-                          />
-                        </div>
-                      ))}
-                      {passErr && (
-                        <div className="flex items-start gap-2 rounded-xl bg-rose-50 px-3 py-2.5 text-xs text-rose-700 ring-1 ring-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:ring-rose-800">
-                          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {passErr}
-                        </div>
-                      )}
-                      <div className="flex gap-2 pt-1">
-                        <Button type="submit" size="sm" disabled={passState === "loading"} className="flex-1">
-                          {passState === "loading" ? "Menyimpan…" : "Simpan"}
-                        </Button>
-                        <Button type="button" variant="secondary" size="sm" onClick={closePassForm}>Batal</Button>
+                    <button
+                      type="button"
+                      onClick={closePassForm}
+                      aria-label="Tutup pemberitahuan"
+                      className="shrink-0 text-redup transition-colors duration-150 hover:text-tinta"
+                    >
+                      <X size={16} aria-hidden="true" />
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleChangePass} className="space-y-3">
+                    {[
+                      { label: "Kata sandi saat ini", value: currentPass, set: setCurrentPass, placeholder: "••••••••", auto: "current-password" },
+                      { label: "Kata sandi baru",      value: newPass,     set: setNewPass,     placeholder: "Min. 8 karakter", auto: "new-password" },
+                      { label: "Konfirmasi kata sandi baru", value: confirmPass, set: setConfirmPass, placeholder: "Ketik ulang kata sandi baru", auto: "new-password" },
+                    ].map(({ label, value, set, placeholder, auto }) => (
+                      <label key={label} className="block">
+                        <span className="mb-2 block text-bantu font-semibold text-tinta">{label}</span>
+                        <Input
+                          type="password" placeholder={placeholder} value={value}
+                          onChange={(e) => set(e.target.value)} autoComplete={auto}
+                        />
+                      </label>
+                    ))}
+                    {passErr && (
+                      <div className="flex items-start gap-2 rounded-[var(--radius-input)] border border-garis bg-merah-latar px-3 py-2.5 text-bantu text-merah">
+                        <WarningCircle size={16} aria-hidden="true" className="mt-0.5 shrink-0" /> {passErr}
                       </div>
-                    </form>
-                  )}
-                </div>
-              )}
-            </div>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <Button type="submit" size="sm" disabled={passState === "loading"} className="flex-1">
+                        {passState === "loading" ? "Menyimpan…" : "Simpan"}
+                      </Button>
+                      <Button type="button" variant="secondary" size="sm" onClick={closePassForm}>Batal</Button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
 
-            <SettingRow
-              icon={Fingerprint} iconTone="slate"
-              label="Sesi aktif"
-              desc="Lihat & kelola perangkat yang masuk."
-              action={<ComingSoon />}
-              last
-            />
-          </CardBody>
+          <SettingRow
+            icon={Fingerprint}
+            label="Sesi aktif"
+            desc="Lihat & kelola perangkat yang masuk."
+            action={<ComingSoon />}
+            last
+          />
         </Card>
       </section>
 
       {/* ── Tentang ── */}
-      <section>
-        <h2 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          Tentang
-        </h2>
-        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex items-center gap-4 px-5 py-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5B5BD6] to-[#9B5BD6] shadow-md shadow-violet-200/50 dark:shadow-violet-950/40">
-              <Layers className="h-5.5 w-5.5 text-white" />
-            </div>
+      <section className="mt-8">
+        <GroupTitle>Tentang</GroupTitle>
+        <Card>
+          <div className="flex items-center gap-4 p-4 sm:p-6">
+            <Logo size={40} />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-slate-900 dark:text-slate-100">{APP_NAME}</p>
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 ring-1 ring-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:ring-blue-800">
-                  v0.1 Pilot
-                </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-isi font-[650] leading-[1.35] tracking-[-0.01em] text-tinta">{APP_NAME}</p>
+                <StatusLabel>v0.1 Pilot</StatusLabel>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{ORG_NAME}</p>
-              <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">Divisi Human Capital</p>
+              <p className="mt-1 text-bantu text-redup">{ORG_NAME}</p>
+              <p className="mt-0.5 text-bantu text-redup">Divisi Human Capital</p>
             </div>
-            <Info className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
+            <Info size={16} aria-hidden="true" className="shrink-0 text-redup" />
           </div>
 
-          <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-700/60">
-            <Shield className="h-3.5 w-3.5 text-slate-400" />
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+          <div className="flex items-center gap-3 border-t border-garis px-4 py-3 sm:px-6">
+            <ShieldCheck size={16} aria-hidden="true" className="shrink-0 text-redup" />
+            <p className="text-bantu text-redup">
               Data dijaga keamanannya · Privasi pelapor diprioritaskan
             </p>
           </div>
-        </div>
+        </Card>
       </section>
 
       {/* ── Keluar ── */}
-      <button
+      <Button
+        variant="secondary"
+        size="lg"
         onClick={handleLogout}
-        className="group flex w-full items-center justify-center gap-2.5 rounded-2xl border border-rose-100 bg-rose-50/80 px-5 py-3.5 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:border-rose-200 hover:bg-rose-100 hover:shadow-md dark:border-rose-900/40 dark:bg-rose-900/15 dark:text-rose-400 dark:hover:bg-rose-900/25"
+        className="mt-8 w-full text-merah"
       >
-        <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+        <SignOut size={18} aria-hidden="true" />
         Keluar dari akun
-      </button>
-
+      </Button>
     </div>
   );
 }
