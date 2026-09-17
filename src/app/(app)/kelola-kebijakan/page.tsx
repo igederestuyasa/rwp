@@ -539,13 +539,13 @@ function FormKebijakan({ awal, idTerpakai, kategoriTersedia, sibuk, onSimpan, on
                 label="Kategori"
                 required
                 error={galat.kategori}
-                hint="Tampil sebagai label di kartu dokumen."
+                hint="Satu sampai tiga kata, tampil sebagai label di kartu dokumen."
               >
                 <Input
                   list={idDatalist}
                   value={nilai.kategori}
                   onChange={(e) => ubah("kategori", e.target.value)}
-                  maxLength={60}
+                  maxLength={30}
                   placeholder="mis. Hubungan Kerja"
                 />
                 <datalist id={idDatalist}>
@@ -1036,7 +1036,7 @@ function KelolaKebijakanIsi() {
     <div
       className={cn(
         "grid grid-cols-1 gap-y-12 pt-6",
-        "lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:gap-x-16 lg:gap-y-8 lg:pt-8",
+        "lg:grid-cols-[minmax(0,1fr)_clamp(320px,36%,400px)] lg:gap-x-16 lg:gap-y-8 lg:pt-8",
         // Baris konten `1fr`, bukan `auto`: panel detail membentang dua baris dan
         // tingginya berubah tiap item berganti. Kalau kedua baris `auto`, tinggi
         // ekstra panel dibagi ke baris pembuka juga, dan tabel yang sedang disorot

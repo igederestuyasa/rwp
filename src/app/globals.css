@@ -2,6 +2,13 @@
 
 @config "../../tailwind.config.js";
 
+/* Kartu item "sempit" (components/hc/ItemCard.tsx): pada kartu di bawah
+   ±400px, label status pindah ke baris sendiri di bawah nama. Diukur dari
+   wadah ItemCardGrid (@container), bukan dari kartunya: kartu <400px terjadi
+   saat wadah <400px (satu kolom) atau 576–811px (dua kolom, tiap kartu =
+   (lebar − 12) / 2). Angka 576 dan 12 mengikuti @xl dan gap-3 di ItemCardGrid. */
+@custom-variant kartu-sempit (@container (width < 400px) or ((width >= 576px) and (width < 812px)));
+
 /* ============================================================
    Token sistem UI "HC Panel" — acuan tunggal: docs/DESIGN.md
    ------------------------------------------------------------

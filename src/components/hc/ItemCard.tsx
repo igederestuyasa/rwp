@@ -5,6 +5,20 @@
 // Grid `auto 1fr auto` dengan area "ikon nama ujung" / "ikon desk desk".
 // Kartu TIDAK boleh berbayang: satu layar hanya punya satu elemen berbayangan
 // dan jatahnya kolom cari (§Prinsip — satu elevasi).
+//
+// Dua susunan, dipilih lewat varian `kartu-sempit` (globals.css, container
+// query dari ItemCardGrid):
+//   - Lebar (≥400px): label status di ujung baris nama, sesuai spesifikasi.
+//     Kolom ujung dibatasi `fit-content(40%)` lebar kartu; tanpa batas ini,
+//     label panjang (kategori kebijakan diketik bebas oleh admin) memeras
+//     kolom nama sampai satu kata per baris lalu menimpa judul. Sel ujung
+//     memakai overflow-hidden supaya minimum otomatisnya nol (spek Grid §6.6)
+//     dan label terakhir boleh menyusut — StatusLabel memotong teksnya
+//     dengan elipsis, jadi bentuk pil tetap utuh.
+//   - Sempit (<400px, mis. dua kolom pada kolom daftar ±640px): nama, label,
+//     dan panah tidak muat sebaris. Label pindah ke baris sendiri di bawah
+//     nama (boleh membungkus), ujung hanya berisi panah, dan nama mendapat
+//     lebar penuh.
 
 import * as React from "react";
 import { ArrowUpRight } from "@phosphor-icons/react";
@@ -62,7 +76,13 @@ export function ItemCard({
   href,
 }: ItemCardProps) {
   const kelas = cn(
-    "group grid w-full items-start text-left",
+    "group grid w-full items-start gap-x-4 gap-y-1 text-left",
+    // Susunan lebar (spesifikasi): "ikon nama ujung" / "ikon desk desk".
+    "[grid-template-columns:auto_1fr_fit-content(40%)]",
+    "[grid-template-areas:'ikon_nama_ujung'_'ikon_desk_desk']",
+    // Susunan sempit: baris "status" disisipkan, ujung tinggal panah.
+    "kartu-sempit:[grid-template-columns:auto_1fr_auto]",
+    "kartu-sempit:[grid-template-areas:'ikon_nama_ujung'_'ikon_status_status'_'ikon_desk_desk']",
     "rounded-[var(--radius-kartu)] border p-4",
     "transition-[border-color,background-color,opacity] duration-150 ease-[var(--ease-standar)]",
     "hover:border-tinta focus-visible:border-tinta active:scale-[.99]",
@@ -80,12 +100,10 @@ export function ItemCard({
     className,
   );
 
-  const gayaGrid: React.CSSProperties = {
-    gridTemplateColumns: "auto 1fr auto",
-    gridTemplateAreas: '"ikon nama ujung" "ikon desk desk"',
-    columnGap: 16,
-    rowGap: 4,
-  };
+  // Label yang sama dirender di dua tempat (ujung untuk susunan lebar, baris
+  // status untuk susunan sempit); yang tidak aktif `display: none`, jadi tidak
+  // ikut tata letak maupun dibaca pembaca layar.
+  const label = rencana ? <StatusLabel>Segera</StatusLabel> : status;
 
   const isi = (
     <>
@@ -116,9 +134,16 @@ export function ItemCard({
 
       <span
         style={{ gridArea: "ujung" }}
-        className="flex h-[22px] shrink-0 items-center gap-2 self-center"
+        className="flex h-[22px] min-w-0 items-center gap-2 self-center overflow-hidden"
       >
-        {rencana ? <StatusLabel>Segera</StatusLabel> : status}
+        {/* Susunan lebar. Hanya label TERAKHIR yang menyusut: pemanggil menaruh
+            penanda pendek yang wajib terbaca (mis. "Draft") di depan dan label
+            bebas (kategori) di belakang — yang terpotong selalu label bebas itu. */}
+        {label ? (
+          <span className="flex min-w-0 items-center gap-2 kartu-sempit:hidden [&>*:last-child]:min-w-0 [&>*:last-child]:shrink">
+            {label}
+          </span>
+        ) : null}
         <ArrowUpRight
           size={18}
           aria-hidden="true"
@@ -130,6 +155,16 @@ export function ItemCard({
           )}
         />
       </span>
+
+      {/* Susunan sempit: label di baris sendiri, boleh membungkus. */}
+      {label ? (
+        <span
+          style={{ gridArea: "status" }}
+          className="hidden min-w-0 flex-wrap items-center gap-2 kartu-sempit:flex"
+        >
+          {label}
+        </span>
+      ) : null}
 
       {deskripsi ? (
         <span
@@ -155,7 +190,6 @@ export function ItemCard({
         href={rencana ? undefined : href}
         aria-disabled={rencana || undefined}
         className={kelas}
-        style={gayaGrid}
         onFocus={saatFokus}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
@@ -171,7 +205,6 @@ export function ItemCard({
       type="button"
       aria-disabled={rencana || undefined}
       className={kelas}
-      style={gayaGrid}
       onFocus={saatFokus}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -182,7 +215,13 @@ export function ItemCard({
   );
 }
 
-/** Grid kartu item: 1 kolom, 2 kolom mulai 640px, jarak 12 (§Komponen). */
+/**
+ * Grid kartu item: 1 kolom, 2 kolom bila WADAHNYA selebar ≥576px, jarak 12
+ * (§Komponen). Diukur dari wadah (container query), bukan viewport: di
+ * aplikasi ini sidebar muncul pada 768px dan panel detail pada 1024px, jadi
+ * kolom daftar bisa jauh lebih sempit dari layar — dengan patokan viewport,
+ * pada 768–1279px kartu terbelah dua jadi ±230px dan judulnya tak terbaca.
+ */
 export function ItemCardGrid({
   children,
   className,
@@ -191,8 +230,8 @@ export function ItemCardGrid({
   className?: string;
 }) {
   return (
-    <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", className)}>
-      {children}
+    <div className={cn("@container", className)}>
+      <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2">{children}</div>
     </div>
   );
 }

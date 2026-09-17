@@ -937,7 +937,7 @@ function KorpusIsi() {
     <div
       className={cn(
         "grid grid-cols-1 gap-y-12 pt-6",
-        "lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:gap-x-16 lg:gap-y-8 lg:pt-8",
+        "lg:grid-cols-[minmax(0,1fr)_clamp(320px,36%,400px)] lg:gap-x-16 lg:gap-y-8 lg:pt-8",
       )}
     >
       {membaca && terpilih ? (

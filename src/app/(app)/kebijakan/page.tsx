@@ -141,7 +141,7 @@ function PolicyDetail({ doc, onBack }: { doc: PolicyDoc; onBack: () => void }) {
 
 // ─── Susunan daftar-detail (§Spasi, bentuk, tata letak) ──────────────────────
 const GAYA_DAFTAR_DETAIL: CSSProperties = {
-  gridTemplateColumns: "minmax(0,1fr) minmax(320px,400px)",
+  gridTemplateColumns: "minmax(0,1fr) clamp(320px,36%,400px)",
   // Baris konten `1fr`: panel yang membentang dua baris tidak boleh ikut
   // meninggikan baris pembuka, atau daftar bergeser tiap panel berganti isi
   // (nyata saat dokumen cuma satu-dua). Lihat catatan yang sama di /kelola-kebijakan.
@@ -341,9 +341,11 @@ function KebijakanIsi() {
                 nama={p.title}
                 deskripsi={p.ringkas}
                 status={
+                  // "Draft" di depan: ItemCard hanya menyusutkan label terakhir,
+                  // jadi kategori yang panjang terpotong, penanda draft tidak.
                   <>
-                    <StatusLabel>{p.kategori}</StatusLabel>
                     {adalahDraft(p) && <StatusLabel nada="peringatan">Draft</StatusLabel>}
+                    <StatusLabel>{p.kategori}</StatusLabel>
                   </>
                 }
                 indeks={i}
