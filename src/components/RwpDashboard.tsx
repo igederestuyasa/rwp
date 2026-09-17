@@ -13,17 +13,19 @@ import {
   CartesianGrid, AreaChart, Area,
 } from "recharts";
 import {
-  ArrowUpRight, CheckCircle, Eye, EyeSlash, Tray, Warning, XCircle,
+  ArrowUpRight, CheckCircle, Eye, EyeSlash, Timer, Tray, Warning, XCircle,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { STATUSES, KATEGORI_INSIDEN } from "@/lib/constants";
-import type { Status } from "@/lib/types";
-import { cn, localIsoDate, daysAgo } from "@/lib/utils";
+import type { Report, Status, StatusLog } from "@/lib/types";
+import { cn, localIsoDate, daysAgo, formatDurasi } from "@/lib/utils";
 import { useTheme } from "@/lib/theme";
 import { SectionTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { KosongHC } from "@/components/hc/KosongHC";
+import { DataTable, type Kolom } from "@/components/hc/DataTable";
+import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
 
 // ── Warna grafik dari token ───────────────────────────────────
 // Recharts butuh warna sebagai NILAI JavaScript, bukan kelas Tailwind. Supaya
@@ -108,12 +110,109 @@ const PRESET_TREN = [
   { label: "3 bulan", hari: 90 },
 ];
 
+// ── Durasi penanganan per fase (dasar penetapan SLA) ──────────
+// Laporan masuk fase "Diterima" saat dibuat, lalu berpindah fase lewat baris
+// report_status_log. Lama sebuah fase = waktu keluar − waktu masuk; fase yang
+// belum ditinggalkan tidak dihitung. Baris audit eskalasi identitas bukan
+// perpindahan status (from == to, lihat RPC reveal_reporter), jadi diabaikan.
+// Hanya menyentuh timestamp dan status — tidak ada isi laporan maupun
+// identitas (§9.1).
+
+/** Fase yang bisa ditinggalkan; status akhir tidak punya lama "di dalam". */
+const FASE_BERJALAN: Status[] = ["Diterima", "Sedang Ditinjau", "Tindak Lanjut"];
+
+export interface RingkasanDurasi {
+  /** Jumlah laporan yang menjadi sampel. */
+  n: number;
+  rataRata: number; // ms
+  median: number;   // ms
+  terlama: number;  // ms
+}
+
+export interface DurasiFase extends RingkasanDurasi {
+  fase: Status;
+}
+
+export interface DurasiPenanganan {
+  /** Lama laporan bertahan di tiap fase sebelum berpindah. */
+  perFase: DurasiFase[];
+  /** Masuk → status akhir (Selesai/Ditutup), dari resolvedAt — definisi yang
+   *  sama dengan rata-rata penyelesaian di laporan periodik (ReportDownload). */
+  total: RingkasanDurasi | null;
+}
+
+const waktu = (iso: string) => new Date(iso).getTime();
+
+function ringkas(sampel: number[]): RingkasanDurasi | null {
+  if (sampel.length === 0) return null;
+  const urut = [...sampel].sort((a, b) => a - b);
+  const tengah = Math.floor(urut.length / 2);
+  return {
+    n: urut.length,
+    rataRata: urut.reduce((s, x) => s + x, 0) / urut.length,
+    median: urut.length % 2 === 0 ? (urut[tengah - 1] + urut[tengah]) / 2 : urut[tengah],
+    terlama: urut[urut.length - 1],
+  };
+}
+
+export function hitungDurasiPenanganan(reports: Report[], logs: StatusLog[]): DurasiPenanganan {
+  const sampel = new Map<Status, number[]>(FASE_BERJALAN.map((f) => [f, []]));
+
+  // Perpindahan sungguhan saja, dikelompokkan per laporan dan urut waktu.
+  const perLaporan = new Map<string, StatusLog[]>();
+  logs.forEach((l) => {
+    if (l.fromStatus === null || l.fromStatus === l.toStatus) return;
+    const arr = perLaporan.get(l.reportId) ?? [];
+    arr.push(l);
+    perLaporan.set(l.reportId, arr);
+  });
+
+  reports.forEach((r) => {
+    const masuk = new Map<Status, number>([["Diterima", waktu(r.createdAt)]]);
+    const urut = [...(perLaporan.get(r.id) ?? [])].sort(
+      (a, b) => waktu(a.createdAt) - waktu(b.createdAt),
+    );
+    urut.forEach((l) => {
+      const dari = l.fromStatus as Status;
+      const t = waktu(l.createdAt);
+      const awal = masuk.get(dari);
+      if (awal !== undefined && t >= awal) sampel.get(dari)?.push(t - awal);
+      masuk.delete(dari);
+      masuk.set(l.toStatus, t);
+    });
+  });
+
+  const perFase: DurasiFase[] = FASE_BERJALAN.map((fase) => ({
+    fase,
+    ...(ringkas(sampel.get(fase) ?? []) ?? { n: 0, rataRata: 0, median: 0, terlama: 0 }),
+  }));
+
+  const total = ringkas(
+    reports
+      .filter((r) => r.resolvedAt)
+      .map((r) => waktu(r.resolvedAt!) - waktu(r.createdAt))
+      .filter((ms) => ms >= 0),
+  );
+
+  return { perFase, total };
+}
+
+const nilaiDurasi = (f: DurasiFase, ms: number) => (f.n > 0 ? formatDurasi(ms) : "—");
+
+const KOLOM_DURASI: Kolom<DurasiFase>[] = [
+  { kunci: "fase", judul: "Status", render: (f) => <StatusLabelLaporan status={f.fase} /> },
+  { kunci: "n", judul: "Laporan", angka: true, render: (f) => f.n },
+  { kunci: "rataRata", judul: "Rata-rata", angka: true, render: (f) => nilaiDurasi(f, f.rataRata) },
+  { kunci: "median", judul: "Median", angka: true, render: (f) => nilaiDurasi(f, f.median) },
+  { kunci: "terlama", judul: "Terlama", angka: true, render: (f) => nilaiDurasi(f, f.terlama) },
+];
+
 // Panel grafik: permukaan datar bertoken, radius 24, tanpa bayangan.
 const KELAS_PANEL =
   "rounded-[var(--radius-panel)] border border-garis bg-kartu p-5 sm:p-6";
 
 export function RwpDashboard() {
-  const { reports } = useStore();
+  const { reports, logs } = useStore();
   const router = useRouter();
 
   const palet = usePaletChart();
@@ -174,6 +273,10 @@ export function RwpDashboard() {
       .filter((d) => d.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [rwpReports]);
+
+  // Durasi penanganan per fase — dasar SLA
+  const durasi = useMemo(() => hitungDurasiPenanganan(rwpReports, logs), [rwpReports, logs]);
+  const adaDurasiFase = durasi.perFase.some((f) => f.n > 0);
 
   return (
     <div className="space-y-12">
@@ -239,6 +342,63 @@ export function RwpDashboard() {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* ── Durasi penanganan: dasar penetapan SLA ── */}
+      <section className={KELAS_PANEL}>
+        <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
+          Durasi penanganan
+        </h2>
+        <p className="mt-1 text-bantu text-redup">
+          Lama laporan bertahan di tiap status sebelum berpindah, dihitung dari
+          riwayat perubahan status. Dasar untuk menetapkan SLA.
+        </p>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <KartuKpi
+            label="Rata-rata penyelesaian"
+            nilai={durasi.total ? formatDurasi(durasi.total.rataRata) : "—"}
+            keterangan={
+              durasi.total
+                ? `Dari ${durasi.total.n} laporan yang selesai atau ditutup`
+                : "Belum ada laporan yang selesai atau ditutup"
+            }
+            ikon={<Timer size={20} aria-hidden="true" />}
+          />
+          <KartuKpi
+            label="Median penyelesaian"
+            nilai={durasi.total ? formatDurasi(durasi.total.median) : "—"}
+            keterangan="Separuh laporan tuntas lebih cepat dari ini"
+          />
+          <KartuKpi
+            label="Penyelesaian terlama"
+            nilai={durasi.total ? formatDurasi(durasi.total.terlama) : "—"}
+            keterangan="Sejak laporan masuk sampai selesai atau ditutup"
+          />
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-bantu font-semibold text-tinta">Lama di tiap status</h3>
+          <p className="mt-1 text-bantu text-redup">
+            Sejak laporan masuk ke status itu sampai berpindah ke status berikutnya.
+            Laporan yang masih berada di status tersebut belum ikut dihitung.
+          </p>
+          {adaDurasiFase ? (
+            <DataTable
+              className="mt-4"
+              label="Lama laporan di tiap status"
+              kolom={KOLOM_DURASI}
+              data={durasi.perFase}
+              kunciBaris={(f) => f.fase}
+            />
+          ) : (
+            <KosongHC
+              className="mt-4"
+              judul="Belum ada perubahan status"
+              ajakan="Begitu laporan pertama berpindah status dari halaman tiket, lama tiap fasenya muncul di sini."
+            />
+          )}
         </div>
       </section>
 
@@ -415,7 +575,7 @@ function KartuKpi({
   ikon,
 }: {
   label: string;
-  nilai: number;
+  nilai: number | string;
   keterangan?: string;
   ikon?: React.ReactNode;
 }) {

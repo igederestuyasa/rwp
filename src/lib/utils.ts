@@ -65,6 +65,18 @@ export function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 86_400_000);
 }
 
+/** Format durasi (milidetik) jadi kalimat singkat: "45 menit", "6,5 jam",
+ *  "2,5 hari". Dipakai dashboard untuk lama penanganan per fase (dasar SLA). */
+export function formatDurasi(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  const menit = ms / 60_000;
+  const jam = menit / 60;
+  const angka = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 1 });
+  if (menit < 60) return `${Math.round(menit)} menit`;
+  if (jam < 24) return `${angka(jam)} jam`;
+  return `${angka(jam / 24)} hari`;
+}
+
 /** Race sebuah promise dengan timeout. Reject Error("timeout") bila kelewat ms.
  *  Dipakai agar request jaringan yang menggantung (mis. browser blokir
  *  Supabase) tidak bikin UI nunggu selamanya. Menerima PromiseLike agar
