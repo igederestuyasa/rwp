@@ -11,8 +11,8 @@
 -- salah satunya diubah, ubah keduanya — file TS dipakai sebagai fallback
 -- mode mock DAN saat tabel policies masih kosong.
 --
--- Untuk menampilkan PDF alih-alih markdown: unggah berkasnya ke bucket
--- privat policy-docs, lalu isi kolom pdf_path dengan path-nya.
+-- Setelah seed, isi tabel ini dikelola dari halaman admin /kelola-kebijakan
+-- (termasuk memasang PDF ke bucket privat policy-docs) — tidak perlu SQL lagi.
 -- ============================================================
 
 insert into public.policies (id, title, kategori, ringkas, body, markdown, is_published, display_order, updated_at)
