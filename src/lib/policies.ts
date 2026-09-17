@@ -13,6 +13,12 @@ export interface PolicyDoc {
   markdown?: string;
   /** Path file PDF di Supabase Storage (bucket privat). Kalau ada, ditampilkan sebagai embed (menggantikan markdown/body). */
   pdfPath?: string;
+  /**
+   * Status terbit dari kolom `is_published`. Hanya terisi `false` untuk draft,
+   * yang cuma dibaca admin di /kebijakan (RLS menyembunyikannya dari karyawan).
+   * `undefined` berarti terbit — data mock dan seed tidak mengisinya.
+   */
+  isPublished?: boolean;
 }
 
 export const POLICIES: PolicyDoc[] = [

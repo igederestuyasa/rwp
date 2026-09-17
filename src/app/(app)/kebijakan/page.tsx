@@ -7,15 +7,22 @@
 //      Hover/fokus kartu hanya mengisi panel, tidak membuka apa-apa.
 //   2. `?id=<id>`    — deep-link dari Sahabat RWP (/kebijakan?id=rwp) yang LANGSUNG
 //      membuka pembaca dokumen. Keduanya hidup berdampingan.
+//
+// Admin membuka halaman yang SAMA untuk memantau apa yang dibaca karyawan.
+// Bedanya satu: draft (`is_published = false`) ikut dimuat dan diberi label
+// "Draft" supaya bisa dipratinjau sebelum terbit — RLS memang mengizinkan
+// admin membacanya, sedangkan karyawan hanya menerima yang terbit. Isinya
+// dikelola di /kelola-kebijakan, bukan di sini.
 
 import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, CircleNotch, Warning } from "@phosphor-icons/react";
+import { ArrowLeft, CircleNotch, NotePencil, Warning } from "@phosphor-icons/react";
 import { POLICIES, type PolicyDoc } from "@/lib/policies";
 import { USE_MOCK, getSupabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
 import { APP_NAME } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { SearchField } from "@/components/hc/SearchField";
 import { ItemCard, ItemCardGrid } from "@/components/hc/ItemCard";
@@ -39,8 +46,23 @@ function rowToPolicy(row: Record<string, unknown>): PolicyDoc {
     ...(row.markdown ? { markdown: String(row.markdown) } : {}),
     // Kolom pdf_path opsional — path file di bucket privat Supabase Storage
     ...(row.pdf_path ? { pdfPath: String(row.pdf_path) } : {}),
+    // Hanya draft yang ditandai; baris terbit dibiarkan `undefined` seperti data mock.
+    ...(row.is_published === false ? { isPublished: false } : {}),
   };
 }
+
+/** Draft hanya sampai ke admin (lihat catatan di kepala berkas). */
+function adalahDraft(doc: PolicyDoc): boolean {
+  return doc.isPublished === false;
+}
+
+/** Tautan bergaya tombol sekunder (Button hanya untuk <button>). */
+const KELAS_TAUTAN_SEKUNDER = cn(
+  "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5",
+  "border border-garis-kuat bg-kartu text-bantu font-semibold text-tinta",
+  "transition-colors duration-150 hover:bg-latar",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta",
+);
 
 /** Bentuk dokumen, untuk baris `dl` di panel detail. */
 function bentukDokumen(doc: PolicyDoc): string {
@@ -57,13 +79,29 @@ function PolicyDetail({ doc, onBack }: { doc: PolicyDoc; onBack: () => void }) {
 
   return (
     <div className="pt-6 lg:pt-8">
-      <Button variant="secondary" className="h-11" onClick={onBack}>
-        <ArrowLeft size={18} weight="regular" aria-hidden="true" />
-        Kembali ke daftar kebijakan
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" className="h-11" onClick={onBack}>
+          <ArrowLeft size={18} weight="regular" aria-hidden="true" />
+          Kembali ke daftar kebijakan
+        </Button>
+        {/* Admin: lompat ke editor kebijakan ini (cek peran hanya untuk tampilan;
+            halaman tujuan dan RLS yang menegakkan wewenangnya, §9.2). */}
+        {user?.role === "admin" && (
+          <Link
+            href={`/kelola-kebijakan?pilih=${encodeURIComponent(doc.id)}&ubah=1`}
+            className={KELAS_TAUTAN_SEKUNDER}
+          >
+            <NotePencil size={18} aria-hidden="true" />
+            Ubah kebijakan
+          </Link>
+        )}
+      </div>
 
       <header className="mt-6">
-        <StatusLabel>{doc.kategori}</StatusLabel>
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusLabel>{doc.kategori}</StatusLabel>
+          {adalahDraft(doc) && <StatusLabel nada="peringatan">Draft</StatusLabel>}
+        </div>
         <h1 className="mt-3 text-halaman leading-[1.05] font-bold tracking-[-0.04em] text-balance text-tinta">
           {doc.title}
         </h1>
@@ -104,6 +142,10 @@ function PolicyDetail({ doc, onBack }: { doc: PolicyDoc; onBack: () => void }) {
 // ─── Susunan daftar-detail (§Spasi, bentuk, tata letak) ──────────────────────
 const GAYA_DAFTAR_DETAIL: CSSProperties = {
   gridTemplateColumns: "minmax(0,1fr) minmax(320px,400px)",
+  // Baris konten `1fr`: panel yang membentang dua baris tidak boleh ikut
+  // meninggikan baris pembuka, atau daftar bergeser tiap panel berganti isi
+  // (nyata saat dokumen cuma satu-dua). Lihat catatan yang sama di /kelola-kebijakan.
+  gridTemplateRows: "auto 1fr",
   gridTemplateAreas: '"pembuka panel" "konten panel"',
   columnGap: 64,
   rowGap: 32,
@@ -112,6 +154,8 @@ const GAYA_DAFTAR_DETAIL: CSSProperties = {
 // ─── Halaman daftar ───────────────────────────────────────────────────────────
 function KebijakanIsi() {
   const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [selected, setSelected] = useState<PolicyDoc | null>(null);
   const [query, setQuery] = useState("");
   const kontenRef = useRef<HTMLDivElement>(null);
@@ -140,11 +184,13 @@ function KebijakanIsi() {
 
     async function load() {
       try {
-        const { data, error } = await getSupabase()
+        // Karyawan: hanya yang terbit. Admin: semuanya, draft diberi label —
+        // RLS tetap lapis penegaknya, filter ini cuma menentukan tampilan.
+        let query = getSupabase()
           .from("policies")
-          .select("id, title, kategori, ringkas, body, markdown, pdf_path, updated_at")
-          .eq("is_published", true)
-          .order("display_order", { ascending: true });
+          .select("id, title, kategori, ringkas, body, markdown, pdf_path, is_published, updated_at");
+        if (!isAdmin) query = query.eq("is_published", true);
+        const { data, error } = await query.order("display_order", { ascending: true });
 
         if (error) throw error;
         setPolicies((data ?? []).map(rowToPolicy));
@@ -156,7 +202,9 @@ function KebijakanIsi() {
     }
 
     load();
-  }, []);
+  }, [isAdmin]);
+
+  const jumlahDraft = isAdmin ? policies.filter(adalahDraft).length : 0;
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -204,7 +252,9 @@ function KebijakanIsi() {
         >
           {loading
             ? "Memuat daftar dokumen kebijakan."
-            : `${policies.length} dokumen kebijakan RWP, pilih satu untuk membaca isinya.`}
+            : jumlahDraft > 0
+              ? `${policies.length - jumlahDraft} dokumen terbit dan ${jumlahDraft} draft yang hanya terlihat admin, pilih satu untuk membaca isinya.`
+              : `${policies.length} dokumen kebijakan RWP, pilih satu untuk membaca isinya.`}
         </p>
 
         <div
@@ -264,12 +314,21 @@ function KebijakanIsi() {
               onAksi={() => setQuery("")}
             />
           ) : (
-            <KosongHC
-              judul="Belum ada kebijakan yang dipublikasikan"
-              ajakan="Dokumen akan muncul di sini begitu tim HC menerbitkannya, sementara itu tanya Sahabat RWP."
-              aksiLabel="Buka Sahabat RWP"
-              href="/asisten"
-            />
+            isAdmin ? (
+              <KosongHC
+                judul="Belum ada kebijakan"
+                ajakan="Tambahkan dokumen kebijakan dari halaman Kelola Kebijakan, lalu terbitkan supaya karyawan bisa membacanya."
+                aksiLabel="Buka Kelola Kebijakan"
+                href="/kelola-kebijakan"
+              />
+            ) : (
+              <KosongHC
+                judul="Belum ada kebijakan yang dipublikasikan"
+                ajakan="Dokumen akan muncul di sini begitu tim HC menerbitkannya, sementara itu tanya Sahabat RWP."
+                aksiLabel="Buka Sahabat RWP"
+                href="/asisten"
+              />
+            )
           )
         )}
 
@@ -281,7 +340,12 @@ function KebijakanIsi() {
                 key={p.id}
                 nama={p.title}
                 deskripsi={p.ringkas}
-                status={<StatusLabel>{p.kategori}</StatusLabel>}
+                status={
+                  <>
+                    <StatusLabel>{p.kategori}</StatusLabel>
+                    {adalahDraft(p) && <StatusLabel nada="peringatan">Draft</StatusLabel>}
+                  </>
+                }
                 indeks={i}
                 onBuka={() => bukaDokumen(p)}
                 {...propsHover(p)}
@@ -303,6 +367,9 @@ function KebijakanIsi() {
               ? {
                   nama: terpilih.title,
                   kategori: terpilih.kategori,
+                  status: adalahDraft(terpilih) ? (
+                    <StatusLabel nada="peringatan">Draft</StatusLabel>
+                  ) : undefined,
                   deskripsi: terpilih.ringkas,
                   baris: [
                     { label: "Diperbarui", nilai: formatDate(terpilih.updated) },

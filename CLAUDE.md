@@ -25,7 +25,11 @@ Empat fungsi:
 3. **Sahabat RWP** (`/asisten`) — asisten AI berbasis RAG, korpusnya HANYA dokumen kebijakan.
 4. **Layanan Psikologi** (`/psikologi`) — 6 kanal EAP, kontak langsung, tanpa tiket.
 
-Sisi admin: `/dashboard` (analitik) dan `/tiket` → `/tiket/[id]` (penanganan).
+Sisi admin: `/dashboard` (analitik), `/tiket` → `/tiket/[id]` (penanganan),
+`/kelola-kebijakan` (isi halaman Kebijakan: tambah, ubah, terbitkan, PDF, hapus),
+dan `/korpus` (pengetahuan asisten). Admin juga punya menu `/kebijakan` yang sama
+dengan karyawan untuk memantau apa yang tampil; di sana draft ikut terlihat
+berlabel "Draft" (RLS mengizinkan admin membaca draft, karyawan tidak).
 
 **Nama**: `APP_NAME = "RWP Hutama Karya"`, `ASSISTANT_NAME = "Sahabat RWP"` —
 keduanya satu-satunya sumber kebenaran, di `src/lib/constants.ts`.
@@ -146,6 +150,14 @@ RPC: `change_report_status`, `reveal_reporter`, `match_rag_chunks`,
 - **`policies.pdf_path`** wajib ada. `kebijakan/page.tsx` menyeleksi kolom itu, dan
   PostgREST menolak seluruh query bila satu kolom tidak ada — halaman kebijakan akan
   gagal total, bukan sekadar kehilangan fitur PDF.
+- **`policies` ditulis dari `/kelola-kebijakan` lewat RLS `policies_admin_*`**
+  dengan token admin yang login, bukan `service_role`. Tabel ini tidak punya
+  trigger `updated_at`, jadi halaman itu mengisi `updated_at` sendiri di setiap
+  `update`. PDF kebijakan disimpan di bucket `policy-docs` dengan path
+  `kebijakan/<id>/<uuid>.pdf` (nama asli tidak dipakai, §9.4); `id` kebijakan
+  dibatasi slug karena ikut ke URL dan path Storage. Menghapus kebijakan
+  membuat `corpus_documents.policy_id` jadi NULL (FK `on delete set null`), dan
+  dokumen korpusnya harus dihapus terpisah dari `/korpus`.
 - **Entri eskalasi terlihat oleh pelapor.** `laporan/[id]` sengaja memakai
   `hideEscalation={false}`. Ini keputusan transparansi, bukan bug.
 
@@ -174,7 +186,9 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   `service_role`. Ingest berjalan bertahap 40 chunk per panggilan karena batas
   waktu serverless. Sumber kebenaran handbook adalah **baris tabel `policies`**
   yang juga dibaca `/kebijakan`, sehingga asisten dan halaman kebijakan tidak
-  bercerita berbeda. `lib/policies.ts` kini hanya data mock dan seed.
+  bercerita berbeda. `lib/policies.ts` kini hanya data mock dan seed. Mengubah
+  Markdown di `/kelola-kebijakan` TIDAK otomatis memperbarui korpus — admin
+  harus "Kirim ke korpus" lagi dari `/korpus` (halaman kelola mengingatkannya).
 - **Admin bisa membaca isi korpus** dari halaman yang sama (klik baris atau
   "Lihat isi", URL `?pilih=<id>&lihat=teks|potongan`). Tab *Teks asli*
   menampilkan sumber lewat `components/MarkdownKebijakan.tsx` (renderer yang

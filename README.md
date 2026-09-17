@@ -14,7 +14,7 @@ mengakses layanan psikologi perusahaan.
 | Untuk | Fitur |
 |---|---|
 | Karyawan | Baca handbook RWP · Lapor insiden (bisa anonim, boleh lampirkan bukti) · Lacak status & chat dengan admin · Tanya asisten AI (Sahabat RWP) · 6 kanal Layanan Psikologi |
-| Admin RWP | Dashboard (status, tren, kategori insiden, proporsi anonim) · Daftar laporan · Ubah status 2 tahap + lampiran · Balas pelapor · Kelola korpus asisten di `/korpus` |
+| Admin RWP | Dashboard (status, tren, kategori insiden, proporsi anonim) · Daftar laporan · Ubah status 2 tahap + lampiran · Balas pelapor · Kelola isi halaman Kebijakan di `/kelola-kebijakan` (tambah, ubah, draft/terbit, PDF) dan memantaunya lewat menu Kebijakan RWP · Kelola korpus asisten di `/korpus` |
 | Admin Superior | Semua di atas + eskalasi identitas pelapor anonim (teraudit) + unduh laporan periodik PDF/Excel |
 
 **Prinsip yang tidak dikompromikan** (detail di `CLAUDE.md` §9):
@@ -128,7 +128,16 @@ node scripts/test-login.mjs         # alur masuk + ambil profil
 node scripts/test-escalation.mjs    # karyawan DITOLAK, superior BERHASIL
 ```
 
-### 5. Menyalakan asisten (RAG)
+### 5. Mengisi halaman Kebijakan
+
+Isi `/kebijakan` dikelola admin dari **halaman `/kelola-kebijakan`** (menu
+**Kelola Kebijakan**): tambah dokumen, tulis isinya dalam Markdown atau pasang
+PDF (dibaca karyawan lewat penampil berwatermark), atur urutan, lalu
+**Terbitkan**. Yang belum terbit tersimpan sebagai draft — karyawan tidak
+melihatnya, tetapi admin bisa mempratinjaunya lewat menu **Kebijakan RWP**,
+berlabel "Draft". Seed `02_policies.sql` hanya perlu untuk mengisi handbook awal.
+
+### 6. Menyalakan asisten (RAG)
 
 Pengetahuan asisten dikelola dari **halaman admin `/korpus`** — tanpa terminal:
 
@@ -155,7 +164,7 @@ dikalibrasi untuk korpus lama dan hampir pasti perlu digeser. Jangan pakai angka
 "0.70–0.80" yang beredar umum — di setup ini terbukti salah. Latar metodenya di
 `docs/embedding.md`.
 
-### 6. Akun tambahan (opsional)
+### 7. Akun tambahan (opsional)
 
 - `node scripts/add-demo-users.mjs` — 40 akun karyawan demo (daftar di
   `scripts/demo-accounts.md`). Hapus sebelum go-live.
@@ -248,7 +257,7 @@ Tanpa ini, tautan reset kata sandi dari email berakhir 404.
 | Asisten | Tanya sesuatu di `/asisten` | Menjawab; kalau korpus kosong, menjawab jujur tidak ditemukan |
 
 Asisten baru berguna setelah korpusnya diisi — lihat bagian
-[Menyalakan asisten (RAG)](#5-menyalakan-asisten-rag).
+[Menyalakan asisten (RAG)](#6-menyalakan-asisten-rag).
 
 ---
 
