@@ -22,7 +22,7 @@ import { cn, localIsoDate, daysAgo, formatDurasi } from "@/lib/utils";
 import { useTheme } from "@/lib/theme";
 import { SectionTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Field";
+import { Field, GlassSelect, Input } from "@/components/ui/Field";
 import { KosongHC } from "@/components/hc/KosongHC";
 import { DataTable, type Kolom } from "@/components/hc/DataTable";
 import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
@@ -199,6 +199,15 @@ export function hitungDurasiPenanganan(reports: Report[], logs: StatusLog[]): Du
 
 const nilaiDurasi = (f: DurasiFase, ms: number) => (f.n > 0 ? formatDurasi(ms) : "—");
 
+// Filter periode: laporan dikelompokkan menurut BULAN MASUKNYA (kohort), bukan
+// bulan perpindahan statusnya, supaya satu laporan utuh masuk satu periode dan
+// angkanya bisa dibandingkan antarbulan. Bulan dibaca di zona lokal, sama
+// seperti localIsoDate — jangan slice() langsung dari ISO UTC.
+const SEMUA_PERIODE = "semua";
+const bulanLokal = (iso: string) => localIsoDate(new Date(iso)).slice(0, 7);
+const labelBulan = (kunci: string) =>
+  new Date(kunci + "-01T00:00:00").toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+
 const KOLOM_DURASI: Kolom<DurasiFase>[] = [
   { kunci: "fase", judul: "Status", render: (f) => <StatusLabelLaporan status={f.fase} /> },
   { kunci: "n", judul: "Laporan", angka: true, render: (f) => f.n },
@@ -274,8 +283,23 @@ export function RwpDashboard() {
       .sort((a, b) => b.value - a.value);
   }, [rwpReports]);
 
-  // Durasi penanganan per fase — dasar SLA
-  const durasi = useMemo(() => hitungDurasiPenanganan(rwpReports, logs), [rwpReports, logs]);
+  // Durasi penanganan per fase — dasar SLA. Periode = bulan laporan masuk.
+  const [periodeDurasi, setPeriodeDurasi] = useState(SEMUA_PERIODE);
+  const opsiPeriode = useMemo(() => {
+    // Hanya bulan yang memang punya laporan masuk, terbaru di atas.
+    const bulan = Array.from(new Set(rwpReports.map((r) => bulanLokal(r.createdAt)))).sort().reverse();
+    return [
+      { value: SEMUA_PERIODE, label: "Semua waktu" },
+      ...bulan.map((b) => ({ value: b, label: labelBulan(b) })),
+    ];
+  }, [rwpReports]);
+  const laporanPeriode = useMemo(
+    () => periodeDurasi === SEMUA_PERIODE
+      ? rwpReports
+      : rwpReports.filter((r) => bulanLokal(r.createdAt) === periodeDurasi),
+    [rwpReports, periodeDurasi],
+  );
+  const durasi = useMemo(() => hitungDurasiPenanganan(laporanPeriode, logs), [laporanPeriode, logs]);
   const adaDurasiFase = durasi.perFase.some((f) => f.n > 0);
 
   return (
@@ -347,13 +371,27 @@ export function RwpDashboard() {
 
       {/* ── Durasi penanganan: dasar penetapan SLA ── */}
       <section className={KELAS_PANEL}>
-        <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
-          Durasi penanganan
-        </h2>
-        <p className="mt-1 text-bantu text-redup">
-          Lama laporan bertahan di tiap status sebelum berpindah, dihitung dari
-          riwayat perubahan status. Dasar untuk menetapkan SLA.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-[28ch]">
+            <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
+              Durasi penanganan
+            </h2>
+            <p className="mt-1 text-bantu text-redup">
+              Lama laporan bertahan di tiap status sebelum berpindah, dihitung dari
+              riwayat perubahan status dan dikelompokkan menurut bulan laporan masuk.
+              Dasar untuk menetapkan SLA.
+            </p>
+          </div>
+          <div className="w-full sm:w-56">
+            <Field label="Bulan laporan masuk">
+              <GlassSelect
+                value={periodeDurasi}
+                onChange={setPeriodeDurasi}
+                options={opsiPeriode}
+              />
+            </Field>
+          </div>
+        </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <KartuKpi
@@ -396,7 +434,11 @@ export function RwpDashboard() {
             <KosongHC
               className="mt-4"
               judul="Belum ada perubahan status"
-              ajakan="Begitu laporan pertama berpindah status dari halaman tiket, lama tiap fasenya muncul di sini."
+              ajakan={
+                periodeDurasi === SEMUA_PERIODE
+                  ? "Begitu laporan pertama berpindah status dari halaman tiket, lama tiap fasenya muncul di sini."
+                  : "Laporan yang masuk pada bulan ini belum ada yang berpindah status. Pilih bulan lain atau Semua waktu."
+              }
             />
           )}
         </div>

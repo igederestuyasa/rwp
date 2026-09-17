@@ -186,8 +186,9 @@ function generate(): { reports: Report[]; logs: StatusLog[] } {
     const status = STATUS_CYCLE[i % STATUS_CYCLE.length];
     const id = `demo-${i}`;
 
-    // ~1–2 laporan per hari, mundur dari BASE → tersebar ~28 hari.
-    const dayOffset = Math.floor((i * 5) / 7);
+    // ~1 laporan per 2 hari, mundur dari BASE → tersebar ~80 hari (Maret–Mei),
+    // supaya filter per bulan di dashboard punya beberapa bulan untuk dibandingkan.
+    const dayOffset = i * 2;
     const created = new Date(BASE.getTime() - dayOffset * 86400000);
     created.setHours(i % 2 === 0 ? 9 : 14, (i * 7) % 60, 0, 0);
 
