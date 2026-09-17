@@ -45,7 +45,7 @@ src/app/                 ← route (App Router); (app)/ = halaman setelah masuk,
 src/components/          ← komponen UI (ui/ primitif, hc/ sistem HC Panel)
 src/lib/                 ← data layer, konstanta, tipe, auth, store, chunker korpus
 supabase/                ← database (petunjuk lengkap: supabase/README.md)
-  migrations/            ← SATU berkas: seluruh skema
+  migrations/            ← skema: satu berkas dasar + migrasi tambahan, berurutan
   seeds/                 ← isi demo (jangan dipakai di lingkungan produksi)
 scripts/                 ← skrip uji koneksi/login/eskalasi, kalibrasi RAG, impor akun
   corpus/                ← dokumen cara-pakai untuk korpus asisten (diunggah lewat /korpus)
@@ -94,15 +94,16 @@ yang sudah ada: [`supabase/README.md`](supabase/README.md).
 
 | Urutan | Berkas | Isi |
 |---|---|---|
-| 1 | `supabase/migrations/20260916000000_skema_rwp.sql` | Seluruh skema: tabel, RLS, view admin, RPC, bucket storage |
-| 2 | *(Dashboard)* buat 3 akun Auth demo | *Authentication → Users*, centang **Auto Confirm User** |
-| 3 | `supabase/seeds/01_users_demo.sql` | Profil 3 akun demo (menautkan ke akun Auth di langkah 2) |
-| 4 | `supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
+| 1 | `supabase/migrations/20260916000000_skema_rwp.sql` | Seluruh skema dasar: tabel, RLS, view admin, RPC, bucket storage |
+| 2 | `supabase/migrations/20260917000000_penilaian_laporan.sql` | Penilaian pelapor setelah laporan final (`report_feedback` + RPC agregat) |
+| 3 | *(Dashboard)* buat 3 akun Auth demo | *Authentication → Users*, centang **Auto Confirm User** |
+| 4 | `supabase/seeds/01_users_demo.sql` | Profil 3 akun demo (menautkan ke akun Auth di langkah 3) |
+| 5 | `supabase/seeds/02_policies.sql` | Isi halaman Kebijakan (handbook RWP) |
 
-Nomor 1 adalah **migrasi** (dijalankan di semua lingkungan). Nomor 3–4 adalah
-**seed** (isi demo — jangan dijalankan di lingkungan yang menampung laporan asli).
+Nomor 1–2 adalah **migrasi** (dijalankan di semua lingkungan, berurutan). Nomor
+4–5 adalah **seed** (isi demo — jangan dijalankan di lingkungan yang menampung laporan asli).
 
-Akun demo untuk langkah 2:
+Akun demo untuk langkah 3:
 
 | Email | Peran | Sandi demo |
 |---|---|---|
