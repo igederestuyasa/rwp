@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft } from "@phosphor-icons/react";
+import { ArrowLeft, Star, WarningCircle } from "@phosphor-icons/react";
 import { EvidenceList } from "@/components/EvidenceList";
 import { useStore } from "@/lib/store";
+import { STATUS_FINAL } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { Panel, MetaField, SlaBox } from "@/components/ui/Panel";
+import { Button } from "@/components/ui/Button";
+import { Input, InputBintang } from "@/components/ui/Field";
 import { StatusLabelLaporan } from "@/components/hc/StatusLabel";
 import { KosongHC } from "@/components/hc/KosongHC";
 import { MemuatHC } from "@/components/hc/MemuatHC";
@@ -124,6 +128,9 @@ export default function LaporanDetailPage() {
               </div>
             )}
           </Panel>
+
+          {/* Penilaian penanganan — hanya setelah status final */}
+          {STATUS_FINAL.includes(report.status) && <PanelPenilaian reportId={report.id} />}
         </div>
 
         <div className="space-y-6">
@@ -139,5 +146,109 @@ export default function LaporanDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Penilaian penanganan — hanya setelah status final ─────────────────────
+// Pelapor menilai 1–5 bintang, sekali per laporan. Syarat kepemilikan dan
+// status final ditegakkan RLS (boleh_nilai_laporan); di sini hanya tampilan.
+// Admin membacanya sebagai agregat di /dashboard, tanpa komentar per laporan.
+function PanelPenilaian({ reportId }: { reportId: string }) {
+  const { feedback, rateReport } = useStore();
+  const penilaian = feedback.find((f) => f.reportId === reportId);
+
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState("");
+  const [mengirim, setMengirim] = useState(false);
+  const [galat, setGalat] = useState<string | null>(null);
+
+  async function kirim() {
+    if (stars === 0 || mengirim) return;
+    setMengirim(true);
+    setGalat(null);
+    try {
+      await rateReport(reportId, stars, comment);
+    } catch (e) {
+      // Detail galat (RLS/PostgREST) hanya ke konsol; pengguna dapat kalimat awam.
+      console.error("Gagal menyimpan penilaian:", e);
+      setGalat("Penilaian belum tersimpan. Coba lagi beberapa saat.");
+    } finally {
+      setMengirim(false);
+    }
+  }
+
+  if (penilaian) {
+    return (
+      <Panel title="Penilaian penanganan">
+        <p className="text-bantu text-redup">
+          Terima kasih, penilaianmu tersimpan {formatDate(penilaian.createdAt)}.
+        </p>
+        <div
+          className="mt-3 flex items-center gap-1"
+          role="img"
+          aria-label={`${penilaian.stars} dari 5 bintang`}
+        >
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star
+              key={n}
+              size={22}
+              aria-hidden="true"
+              weight={n <= penilaian.stars ? "fill" : "regular"}
+              className={n <= penilaian.stars ? "text-tinta" : "text-garis-kuat"}
+            />
+          ))}
+        </div>
+        {penilaian.comment && (
+          <p className="mt-3 break-words text-isi leading-relaxed text-redup">
+            “{penilaian.comment}”
+          </p>
+        )}
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel title="Penilaian penanganan">
+      <p className="text-bantu text-redup">
+        Penanganan laporan ini sudah selesai. Seberapa puas kamu dengan cara tim HC
+        menanganinya? Tim HC hanya melihat angka gabungan, bukan penilaian per laporan.
+      </p>
+      <InputBintang
+        value={stars}
+        onChange={setStars}
+        label="Kepuasan penanganan"
+        className="mt-3"
+      />
+      {stars > 0 && (
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label htmlFor="komentar-penilaian" className="sr-only">
+            Komentar penilaian
+          </label>
+          <Input
+            id="komentar-penilaian"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={300}
+            placeholder="Komentar (opsional)…"
+            className="min-w-0 flex-1"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={kirim}
+            disabled={mengirim}
+            className="h-11 shrink-0"
+          >
+            {mengirim ? "Menyimpan…" : "Kirim penilaian"}
+          </Button>
+        </div>
+      )}
+      {galat && (
+        <p role="alert" className="mt-3 flex items-start gap-1.5 text-bantu text-merah">
+          <WarningCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          {galat}
+        </p>
+      )}
+    </Panel>
   );
 }

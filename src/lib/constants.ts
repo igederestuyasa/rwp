@@ -107,6 +107,10 @@ export const STATUSES: Status[] = [
   "Diterima", "Sedang Ditinjau", "Tindak Lanjut", "Selesai", "Ditutup",
 ];
 
+/** Status akhir penanganan — laporan tidak bisa berpindah status lagi dan
+ *  pelapor boleh memberi penilaian (selaras boleh_nilai_laporan di DB). */
+export const STATUS_FINAL: readonly Status[] = ["Selesai", "Ditutup"];
+
 export const STATUS_TRANSITIONS: Record<Status, Status[]> = {
   Diterima: ["Sedang Ditinjau", "Ditutup"],
   "Sedang Ditinjau": ["Tindak Lanjut", "Ditutup"],

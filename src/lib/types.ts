@@ -61,6 +61,16 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+/** Penilaian pelapor atas penanganan laporannya — satu kali, hanya setelah
+ *  status final (Selesai/Ditutup). Tidak membawa identitas: kepemilikan
+ *  diturunkan dari laporan (§9.1). */
+export interface ReportFeedback {
+  reportId: string;
+  stars: number; // 1–5
+  comment?: string;
+  createdAt: string;
+}
+
 export interface StatusLog {
   id: string;
   reportId: string;

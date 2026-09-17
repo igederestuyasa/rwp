@@ -11,14 +11,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {
   Robot, PaperPlaneRight, Sparkle, FileText, ShieldWarning, Trash,
-  Plus, ChatCircle, Star, X, ClockCounterClockwise, CircleNotch, HandHeart, NotePencil } from "@phosphor-icons/react";
+  Plus, ChatCircle, X, ClockCounterClockwise, CircleNotch, HandHeart, NotePencil } from "@phosphor-icons/react";
 import { MOCK_QA_ANSWER, MOCK_QA_SOURCES } from "@/lib/mock";
 import { ASSISTANT_NAME } from "@/lib/constants";
 import { USE_MOCK, getSupabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Field";
+import { Input, InputBintang } from "@/components/ui/Field";
 import { ItemCard, ItemCardGrid } from "@/components/hc/ItemCard";
 import {
   type ActionItem, type ChatMsg, type ChatSession,
@@ -631,7 +631,6 @@ function RatingPrompt({
   onSubmit, onDismiss,
 }: { onSubmit: (stars: number, comment: string) => void; onDismiss: () => void }) {
   const [stars, setStars] = useState(0);
-  const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
 
   return (
@@ -655,32 +654,7 @@ function RatingPrompt({
         Masukanmu membantu kami memperbaiki asisten ini.
       </p>
 
-      <div className="mt-2 flex items-center" onMouseLeave={() => setHover(0)}>
-        {[1, 2, 3, 4, 5].map((n) => {
-          const filled = (hover || stars) >= n;
-          return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setStars(n)}
-              onMouseEnter={() => setHover(n)}
-              aria-label={`${n} bintang`}
-              aria-pressed={stars === n}
-              className="flex h-11 w-11 items-center justify-center rounded-full"
-            >
-              <Star
-                size={26}
-                weight={filled ? "fill" : "regular"}
-                aria-hidden="true"
-                className={cn(
-                  "transition-colors duration-150 ease-[var(--ease-standar)]",
-                  filled ? "text-tinta" : "text-garis-kuat",
-                )}
-              />
-            </button>
-          );
-        })}
-      </div>
+      <InputBintang value={stars} onChange={setStars} className="mt-2" />
 
       {stars > 0 && (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">

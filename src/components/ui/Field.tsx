@@ -9,7 +9,7 @@ import {
   type TextareaHTMLAttributes,
   type ReactNode,
 } from "react";
-import { CaretDown, Check, WarningCircle } from "@phosphor-icons/react";
+import { CaretDown, Check, Star, WarningCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 // Input form sistem UI "HC Panel" (docs/DESIGN.md §Komponen):
@@ -174,6 +174,61 @@ export function GlassSelect({
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── InputBintang — pemilih 1–5 bintang (skala Likert) ──
+// Dipakai prompt rating asisten (/asisten) dan penilaian penanganan laporan
+// (/laporan/[id]). Tiap bintang adalah tombol 44px (target sentuh
+// §Aksesibilitas) dengan aria-pressed; hover mengisi bintang sampai posisi
+// kursor. Terisi = tinta, kosong = garis-kuat — tanpa warna tambahan.
+export function InputBintang({
+  value,
+  onChange,
+  label = "Penilaian bintang",
+  className,
+}: {
+  value: number;
+  onChange: (bintang: number) => void;
+  label?: string;
+  className?: string;
+}) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn("flex items-center", className)}
+      onMouseLeave={() => setHover(0)}
+    >
+      {[1, 2, 3, 4, 5].map((n) => {
+        const terisi = (hover || value) >= n;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            onMouseEnter={() => setHover(n)}
+            aria-label={`${n} bintang`}
+            aria-pressed={value === n}
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta",
+            )}
+          >
+            <Star
+              size={26}
+              weight={terisi ? "fill" : "regular"}
+              aria-hidden="true"
+              className={cn(
+                "transition-colors duration-150 ease-[var(--ease-standar)]",
+                terisi ? "text-tinta" : "text-garis-kuat",
+              )}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }

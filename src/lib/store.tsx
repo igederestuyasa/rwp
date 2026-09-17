@@ -8,6 +8,8 @@
 // Perubahan signature: addReport kini async (Promise<Report>) — call site di-await.
 // Tambahan (hasil audit): `loading` dan `error`, supaya halaman bisa membedakan
 // "belum tiba" / "gagal memuat" dari "memang kosong".
+// Tambahan (penilaian): `feedback` + `rateReport` — penilaian pelapor setelah
+// laporan final; hanya milik pelapor sendiri, admin tidak pernah menerimanya.
 import {
   createContext, useCallback, useContext, useEffect, useState, type ReactNode,
 } from "react";
@@ -16,11 +18,15 @@ import { DEMO_REPORTS } from "./demoReports"; // ⚠️ data demo (mode mock)
 import { useAuth } from "./auth";
 import { getSupabase, USE_MOCK } from "./supabaseClient";
 import {
-  reportFromRow, reportToInsert, messageFromRow, statusLogFromRow, encodeAttachments,
-  type ReportRow, type MessageRow, type StatusLogRow,
+  reportFromRow, reportToInsert, messageFromRow, statusLogFromRow, feedbackFromRow,
+  encodeAttachments,
+  type ReportRow, type MessageRow, type StatusLogRow, type FeedbackRow,
 } from "./mappers";
 import { uploadEvidence, uploadAttachments } from "./storage";
-import type { ChatMessage, EvidenceFile, Report, Role, Status, StatusLog } from "./types";
+import { STATUS_FINAL } from "./constants";
+import type {
+  ChatMessage, EvidenceFile, Report, ReportFeedback, Role, Status, StatusLog,
+} from "./types";
 import { makeTicketNo, withTimeout } from "./utils";
 
 // Batas waktu fetch Supabase — kalau request menggantung (mis. browser
@@ -34,6 +40,7 @@ const KOLOM_LAPORAN =
 const KOLOM_LAPORAN_ADMIN = `${KOLOM_LAPORAN}, reporter_name, reporter_nik`;
 const KOLOM_PESAN = "id, report_id, sender_role, message, attachments, created_at";
 const KOLOM_LOG = "id, report_id, from_status, to_status, note, attachments, created_at";
+const KOLOM_PENILAIAN = "report_id, stars, comment, created_at";
 
 /** Baris v_reports_admin: kolom laporan + identitas yang sudah disaring SQL. */
 type ReportRowAdmin = ReportRow & { reporter_name?: string | null; reporter_nik?: string | null };
@@ -58,9 +65,13 @@ interface StoreValue {
   reports: Report[];
   messages: ChatMessage[];
   logs: StatusLog[];
+  /** Penilaian penanganan milik pelapor sendiri (untuk admin selalu kosong). */
+  feedback: ReportFeedback[];
   addReport: (input: NewReportInput) => Promise<Report>;
   addMessage: (reportId: string, senderRole: Role, message: string, files?: File[]) => Promise<void>;
   changeStatus: (reportId: string, to: Status, note?: string, files?: File[]) => Promise<void>;
+  /** Beri penilaian 1–5 bintang atas penanganan laporan yang sudah final — satu kali per laporan. */
+  rateReport: (reportId: string, stars: number, comment?: string) => Promise<void>;
   /** Buka identitas pelapor anonim (eskalasi berotorisasi, dicatat di audit log). */
   revealReporter: (reportId: string, reason: string) => Promise<{ nama: string; nik: string }>;
   refresh: () => Promise<void>;
@@ -81,6 +92,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
   const [messages, setMessages] = useState<ChatMessage[]>(USE_MOCK ? SEED_MESSAGES : []);
   const [logs, setLogs] = useState<StatusLog[]>(USE_MOCK ? SEED_LOGS : []);
+  const [feedback, setFeedback] = useState<ReportFeedback[]>([]);
   const [loading, setLoading] = useState(!USE_MOCK);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,8 +107,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const isAdmin = user.role === "admin";
 
     try {
-      // Empat sumber tidak saling bergantung → satu putaran jaringan, bukan empat.
-      const [repRes, evRes, msgRes, logRes] = await Promise.all([
+      // Lima sumber tidak saling bergantung → satu putaran jaringan, bukan lima.
+      const [repRes, evRes, msgRes, logRes, fbRes] = await Promise.all([
         withTimeout(
           isAdmin
             ? supabase.from("v_reports_admin").select(KOLOM_LAPORAN_ADMIN).order("created_at", { ascending: false })
@@ -115,11 +127,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           supabase.from("report_status_log").select(KOLOM_LOG).order("created_at", { ascending: true }),
           FETCH_TIMEOUT_MS,
         ),
+        // Penilaian hanya bisa dibaca pelapornya (tidak ada policy admin),
+        // jadi untuk admin tidak perlu ditanyakan sama sekali.
+        isAdmin
+          ? Promise.resolve({ data: [] as FeedbackRow[], error: null })
+          : withTimeout(supabase.from("report_feedback").select(KOLOM_PENILAIAN), FETCH_TIMEOUT_MS),
       ]);
       if (repRes.error) throw new Error(`reports: ${repRes.error.message}`);
       if (evRes.error) throw new Error(`evidence: ${evRes.error.message}`);
       if (msgRes.error) throw new Error(`messages: ${msgRes.error.message}`);
       if (logRes.error) throw new Error(`status_log: ${logRes.error.message}`);
+      if (fbRes.error) throw new Error(`feedback: ${fbRes.error.message}`);
 
       // Evidence (jumlah + nama + path untuk signed URL)
       const evByReport = new Map<string, EvidenceFile[]>();
@@ -141,6 +159,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
       setMessages(((msgRes.data ?? []) as unknown as MessageRow[]).map(messageFromRow));
       setLogs(((logRes.data ?? []) as unknown as StatusLogRow[]).map(statusLogFromRow));
+      setFeedback(((fbRes.data ?? []) as unknown as FeedbackRow[]).map(feedbackFromRow));
       setError(null);
     } catch (e) {
       // Jangan biarkan error/timeout menggantungkan UI: catat detailnya di
@@ -163,6 +182,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setReports([]);
       setMessages([]);
       setLogs([]);
+      setFeedback([]);
     }
   }
 
@@ -286,6 +306,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await refresh(); // tarik ulang reports + logs
   }
 
+  // ── rateReport (penilaian penanganan) ──
+  async function rateReport(reportId: string, stars: number, comment?: string): Promise<void> {
+    const bintang = Math.max(1, Math.min(5, Math.round(stars)));
+    const catatan = comment?.trim() || undefined;
+
+    if (USE_MOCK) {
+      const r = reports.find((x) => x.id === reportId);
+      if (!r || !STATUS_FINAL.includes(r.status)) {
+        throw new Error("Penilaian hanya bisa diberikan setelah penanganan laporan selesai.");
+      }
+      if (feedback.some((f) => f.reportId === reportId)) {
+        throw new Error("Laporan ini sudah pernah dinilai.");
+      }
+      setFeedback((prev) => [
+        ...prev,
+        { reportId, stars: bintang, comment: catatan, createdAt: new Date().toISOString() },
+      ]);
+      return;
+    }
+
+    // Kepemilikan + syarat status final ditegakkan RLS (boleh_nilai_laporan),
+    // satu penilaian per laporan ditegakkan primary key. Galat DB diteruskan
+    // apa adanya; halaman yang menampilkan kalimat awamnya.
+    const { data, error } = await getSupabase()
+      .from("report_feedback")
+      .insert({ report_id: reportId, stars: bintang, comment: catatan ?? null })
+      .select(KOLOM_PENILAIAN)
+      .single();
+    if (error) throw new Error(error.message);
+    setFeedback((prev) => [...prev, feedbackFromRow(data as unknown as FeedbackRow)]);
+  }
+
   // ── revealReporter (eskalasi) ──
   async function revealReporter(
     reportId: string, reason: string,
@@ -311,7 +363,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   return (
     <StoreContext.Provider
       value={{
-        reports, messages, logs, addReport, addMessage, changeStatus, revealReporter, refresh,
+        reports, messages, logs, feedback,
+        addReport, addMessage, changeStatus, rateReport, revealReporter, refresh,
         loading, error,
       }}
     >

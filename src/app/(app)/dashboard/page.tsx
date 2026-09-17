@@ -2,14 +2,16 @@
 
 // Dashboard admin RWP. Isi utamanya ada di <RwpDashboard/>; halaman ini
 // hanya penjaga akses + komposisi panel tambahan.
-//   - ChatRatingDashboard : rating agregat asisten (tanpa isi percakapan, §9.2)
+//   - RatingDashboard ×2  : agregat penilaian penanganan laporan dan rating
+//                           asisten (tanpa komentar/isi percakapan, §9.1–9.2)
 //   - ReportDownload      : unduh laporan periodik — hanya admin superior
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { RwpDashboard } from "@/components/RwpDashboard";
-import { ChatRatingDashboard } from "@/components/ChatRatingDashboard";
+import { RatingDashboard } from "@/components/RatingDashboard";
+import { ASSISTANT_NAME } from "@/lib/constants";
 import { ReportDownload } from "@/components/ReportDownload";
 
 export default function DashboardPage() {
@@ -43,7 +45,16 @@ export default function DashboardPage() {
         style={{ animationDelay: "110ms" }}
       >
         <RwpDashboard />
-        <ChatRatingDashboard />
+        <RatingDashboard
+          judul="Penilaian penanganan laporan"
+          keterangan="Bintang dari pelapor setelah laporan selesai ditangani — agregat harian, tanpa komentar dan tanpa nomor tiket."
+          rpc="get_report_feedback_summary"
+        />
+        <RatingDashboard
+          judul={`Rating ${ASSISTANT_NAME}`}
+          keterangan="Ulasan agregat dari karyawan, tanpa isi percakapan."
+          rpc="get_chat_feedback_summary"
+        />
         {user.subRole === "superior" && <ReportDownload />}
       </div>
     </div>

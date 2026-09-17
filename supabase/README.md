@@ -6,19 +6,24 @@ Struktur di folder ini mengikuti tata letak Supabase CLI.
 supabase/
 ├── config.toml                          konfigurasi CLI (project_id, daftar seed)
 ├── migrations/
-│   └── 20260916000000_skema_rwp.sql     SELURUH skema: tabel, helper, RLS, view admin,
-│                                        RPC, bucket & policy storage
+│   ├── 20260916000000_skema_rwp.sql     SELURUH skema per 16 Sep 2026: tabel, helper, RLS,
+│   │                                    view admin, RPC, bucket & policy storage
+│   └── 20260917000000_penilaian_laporan.sql
+│                                        report_feedback (penilaian pelapor setelah laporan
+│                                        final), boleh_nilai_laporan, get_report_feedback_summary
 └── seeds/                               ISI awal, bukan skema
     ├── 01_users_demo.sql                profil 3 akun demo
     └── 02_policies.sql                  handbook RWP untuk halaman /kebijakan
 ```
 
-**Satu migrasi = seluruh skema.** Enam migrasi terdahulu (baseline, storage,
-korpus admin, `chunk_index`, pengerasan RLS, indeks & policy) sudah dilebur ke
-keadaan akhirnya. Hasil leburannya diverifikasi dengan `pg_dump` pada Postgres
-16 + pgvector: pemasangan baru, pemasangan di atas database yang sudah memakai
-enam migrasi lama, dan eksekusi dua kali — ketiganya menghasilkan skema yang
-identik.
+**Migrasi pertama = seluruh skema per 16 Sep 2026.** Enam migrasi terdahulu
+(baseline, storage, korpus admin, `chunk_index`, pengerasan RLS, indeks &
+policy) sudah dilebur ke keadaan akhirnya. Hasil leburannya diverifikasi dengan
+`pg_dump` pada Postgres 16 + pgvector: pemasangan baru, pemasangan di atas
+database yang sudah memakai enam migrasi lama, dan eksekusi dua kali —
+ketiganya menghasilkan skema yang identik. Perubahan setelah itu ditambahkan
+sebagai berkas baru di belakangnya (lihat "Menambah perubahan skema
+berikutnya"), dan dijalankan berurutan menurut nama berkas.
 
 **Migrasi mengubah bentuk database, seed mengisinya.** Migrasi dijalankan di
 setiap lingkungan; seed hanya untuk demo dan pilot, dan JANGAN dijalankan di
@@ -29,7 +34,8 @@ lingkungan yang sudah menampung laporan asli — akun demo bukan untuk produksi.
 ### Cara A — SQL Editor di Dashboard (paling sederhana)
 
 1. Buka *Supabase Dashboard → SQL Editor*.
-2. Tempel seluruh isi `migrations/20260916000000_skema_rwp.sql`, jalankan.
+2. Tempel dan jalankan setiap berkas di `migrations/` berurutan menurut nama
+   (`20260916000000_skema_rwp.sql`, lalu `20260917000000_penilaian_laporan.sql`).
 3. Buat tiga akun Auth demo di *Authentication → Users* (centang **Auto
    Confirm User**) dengan email persis seperti di `seeds/01_users_demo.sql`.
 4. Tempel dan jalankan `seeds/01_users_demo.sql`, lalu `seeds/02_policies.sql`.
@@ -39,7 +45,7 @@ Kalau nanti ingin memakai CLI (Cara B) pada database yang sama, catat dulu
 bahwa migrasinya sudah jalan supaya `db push` tidak mengulangnya:
 
 ```bash
-supabase migration repair --status applied 20260916000000
+supabase migration repair --status applied 20260916000000 20260917000000
 ```
 
 Mengulangnya pun tidak merusak — migrasinya idempotent — tetapi ini membuat
@@ -80,7 +86,9 @@ supabase migration repair --status applied  20260916000000
 
 Tanpa ini `db push` menolak karena riwayat remote memuat versi yang tidak ada
 di `migrations/`. Kalau database itu hanya dikelola lewat SQL Editor, tidak
-perlu melakukan apa pun.
+perlu melakukan apa pun untuk migrasi gabungan itu. Migrasi setelahnya
+(`20260917000000_penilaian_laporan.sql` dan seterusnya) tetap harus dijalankan
+seperti biasa, karena isinya memang belum ada di database lama.
 
 ## Menambah perubahan skema berikutnya
 

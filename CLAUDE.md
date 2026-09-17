@@ -21,7 +21,7 @@ secara rahasia, dan memantau penanganannya.
 Empat fungsi:
 
 1. **Kebijakan RWP** (`/kebijakan`) — handbook lengkap, dirender dari Markdown atau PDF berwatermark.
-2. **Pelaporan** (`/lapor` → `/laporan` → `/laporan/[id]`) — form insiden, opsi anonim, unggah bukti, pelacakan status, percakapan dengan admin.
+2. **Pelaporan** (`/lapor` → `/laporan` → `/laporan/[id]`) — form insiden, opsi anonim, unggah bukti, pelacakan status, percakapan dengan admin, penilaian penanganan setelah laporan final.
 3. **Sahabat RWP** (`/asisten`) — asisten AI berbasis RAG, korpusnya HANYA dokumen kebijakan.
 4. **Layanan Psikologi** (`/psikologi`) — 6 kanal EAP, kontak langsung, tanpa tiket.
 
@@ -92,7 +92,7 @@ SQL ada di `supabase/` dengan tata letak Supabase CLI. Petunjuk lengkap:
 `supabase/README.md`.
 
 **Migrasi** (`supabase/migrations/`) — mengubah bentuk database, dijalankan
-di setiap lingkungan. Hanya ada **satu** berkas:
+di setiap lingkungan, berurutan menurut nama berkas:
 
 - `20260916000000_skema_rwp.sql` — seluruh skema dalam keadaan akhirnya:
   tabel, trigger, helper definer (`is_admin`, `can_escalate`,
@@ -102,6 +102,9 @@ di setiap lingkungan. Hanya ada **satu** berkas:
   `chunk_index`, pengerasan RLS, indeks & policy); hasilnya diverifikasi
   identik lewat `pg_dump`, termasuk saat dijalankan di atas database yang
   sudah memakai enam migrasi lama.
+- `20260917000000_penilaian_laporan.sql` — tabel `report_feedback`
+  (penilaian pelapor setelah laporan final), helper `boleh_nilai_laporan`,
+  RLS-nya, dan RPC agregat `get_report_feedback_summary`.
 
 **Seed** (`supabase/seeds/`) — isi demo, JANGAN dijalankan di lingkungan
 yang menampung laporan asli:
@@ -120,11 +123,11 @@ membuat `db push` gagal. Migrasi yang dijalankan lewat SQL Editor dicatat
 dengan `supabase migration repair --status applied <versi>`.
 
 Tabel: `users`, `reports`, `report_evidence`, `report_messages`,
-`report_status_log`, `policies`, `rag_chunks`, `corpus_documents`, `chat_sessions`,
-`chat_messages`, `chat_feedback`.
+`report_status_log`, `report_feedback`, `policies`, `rag_chunks`,
+`corpus_documents`, `chat_sessions`, `chat_messages`, `chat_feedback`.
 
 RPC: `change_report_status`, `reveal_reporter`, `match_rag_chunks`,
-`get_chat_feedback_summary`.
+`get_chat_feedback_summary`, `get_report_feedback_summary`.
 
 ### Yang tidak boleh diubah tanpa berpikir dua kali
 
@@ -148,6 +151,13 @@ RPC: `change_report_status`, `reveal_reporter`, `match_rag_chunks`,
   gagal total, bukan sekadar kehilangan fitur PDF.
 - **Entri eskalasi terlihat oleh pelapor.** `laporan/[id]` sengaja memakai
   `hideEscalation={false}`. Ini keputusan transparansi, bukan bug.
+- **`report_feedback` tidak menyimpan `user_id` dan tidak punya policy admin.**
+  Kepemilikan diturunkan dari `reports.reporter_id` lewat `boleh_nilai_laporan`
+  (pemilik + status final), dan admin hanya membaca agregat harian lewat
+  `get_report_feedback_summary`. Jangan menambah policy select admin atau
+  menampilkan komentar per laporan: komentar bebas adalah vektor
+  de-anonimisasi lewat gaya tulisan (§9.1). Satu penilaian per laporan
+  ditegakkan primary key `report_id`, tanpa policy update/delete.
 
 ---
 
@@ -209,7 +219,7 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
   disimpan di `localStorage` key `rwp_theme`. **Tailwind v4**: `darkMode: "selector"`
   wajib lewat `tailwind.config.js` yang direferensikan `@config` di `globals.css`.
 - Komponen bersama: primitif di `components/ui/` (`Button`, `Card`, `Field` termasuk
-  `GlassSelect`, `Panel`) dan sistem HC Panel di `components/hc/` (`StatusLabel`,
+  `GlassSelect` dan `InputBintang`, `Panel`) dan sistem HC Panel di `components/hc/` (`StatusLabel`,
   `KosongHC`, `MemuatHC`, `ItemCard`, `DetailPanel`, `SearchField`, `FilterTabs`,
   `DataTable`, `GenerativeIcon`, `Logo`). Pakai ulang, jangan bikin varian baru.
 - Keadaan halaman: `MemuatHC` saat data store belum tiba (`useStore().loading`),
@@ -338,7 +348,7 @@ Ini pilot di free tier untuk pembuktian konsep. Sebelum menampung laporan RWP as
   `store.tsx`/`theme.tsx` seperti catatan lama ini (ketiganya sudah bersih),
   melainkan di `login/page.tsx` (4 ikon SVG statis dideklarasikan ulang tiap
   render), `useIdleTimeout.ts` (tulis ref saat render + `setState` sinkron di
-  effect), `ChatRatingDashboard.tsx` dan `kebijakan/page.tsx` (`setState` sinkron
+  effect), `RatingDashboard.tsx` (saat itu `ChatRatingDashboard.tsx`) dan `kebijakan/page.tsx` (`setState` sinkron
   di effect). `eslint src` sekarang exit 0.
 - ~~Sisa 6 warning lint~~ — **SELESAI** saat redesign HC Panel. Impor `DotGrid`
   yang menganggur hilang bersama berkasnya, `ThemeSegment` akhirnya dirender

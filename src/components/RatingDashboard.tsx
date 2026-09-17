@@ -1,10 +1,13 @@
 "use client";
 
 // ============================================================
-// Rating asisten — panel agregat di dashboard admin.
-// Tampilan mengikuti sistem UI "HC Panel" (docs/DESIGN.md). Logika tidak
-// berubah: rentang tanggal, preset, RPC get_chat_feedback_summary, dan
-// pemisahan mock/Supabase tetap sama. Isi percakapan TIDAK pernah dibaca (§9.2).
+// Panel rating agregat di dashboard admin — dipakai dua kali:
+//  - rating asisten           → RPC get_chat_feedback_summary
+//  - penilaian penanganan     → RPC get_report_feedback_summary
+// Kedua RPC mengembalikan bentuk yang sama (tanggal × bintang × jumlah),
+// jadi satu komponen cukup. Tampilan mengikuti sistem UI "HC Panel"
+// (docs/DESIGN.md). Isi percakapan, komentar, dan nomor tiket TIDAK pernah
+// dibaca di sini (§9.1–9.2) — hanya agregat.
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,7 +18,6 @@ import {
 import { Star } from "@phosphor-icons/react";
 import { getSupabase, USE_MOCK } from "@/lib/supabaseClient";
 import { localIsoDate, daysAgo } from "@/lib/utils";
-import { ASSISTANT_NAME } from "@/lib/constants";
 import { usePaletChart, gayaTooltip } from "@/components/RwpDashboard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
@@ -27,6 +29,11 @@ interface FeedbackRow {
   count: number;
 }
 
+/** RPC agregat yang bisa ditampilkan panel ini — keduanya security definer
+ *  dengan cek is_admin() di dalam, dan tidak pernah mengembalikan baris
+ *  individual. */
+export type RatingRpc = "get_chat_feedback_summary" | "get_report_feedback_summary";
+
 // ── Konstanta ──────────────────────────────────────────────────
 const PRESETS: { label: string; days: number }[] = [
   { label: "7 hari",  days: 7 },
@@ -35,14 +42,19 @@ const PRESETS: { label: string; days: number }[] = [
 ];
 
 // ── Mock data ──────────────────────────────────────────────────
-function makeMockRows(from: string, to: string): FeedbackRow[] {
+// Sebaran per hari (1–5 bintang) untuk mode mock. Sengaja beda antar panel
+// supaya demo tidak menampilkan dua grafik kembar.
+const MOCK_DIST: Record<RatingRpc, number[]> = {
+  get_chat_feedback_summary:   [1, 0, 1, 3, 5],
+  get_report_feedback_summary: [0, 1, 1, 2, 3],
+};
+
+function makeMockRows(from: string, to: string, dist: number[]): FeedbackRow[] {
   const rows: FeedbackRow[] = [];
   const cur = new Date(from + "T00:00:00");
   const end = new Date(to + "T00:00:00");
   while (cur <= end) {
     const d = localIsoDate(cur);
-    // Simulasi: kebanyakan 4–5 bintang
-    const dist = [1, 0, 1, 3, 5];
     dist.forEach((count, i) => {
       if (count > 0) rows.push({ log_date: d, stars: i + 1, count });
     });
@@ -87,7 +99,15 @@ function toTrend(rows: FeedbackRow[], from: string, to: string): TrendPoint[] {
 
 // ── Komponen utama ─────────────────────────────────────────────
 
-export function ChatRatingDashboard() {
+export function RatingDashboard({
+  judul,
+  keterangan,
+  rpc,
+}: {
+  judul: string;
+  keterangan: string;
+  rpc: RatingRpc;
+}) {
   const today = localIsoDate();
 
   const [fetchedRows, setFetchedRows] = useState<FeedbackRow[]>([]);
@@ -101,8 +121,8 @@ export function ChatRatingDashboard() {
   // jadi tak perlu effect — menghitungnya saat render menghindari render kedua
   // yang cuma menyalin hasil ke state.
   const mockRows = useMemo(
-    () => (USE_MOCK ? makeMockRows(from, to) : []),
-    [from, to],
+    () => (USE_MOCK ? makeMockRows(from, to, MOCK_DIST[rpc]) : []),
+    [from, to, rpc],
   );
 
   const rows    = USE_MOCK ? mockRows : fetchedRows;
@@ -112,14 +132,14 @@ export function ChatRatingDashboard() {
     if (USE_MOCK) return;
     let active = true;
     void getSupabase()
-      .rpc("get_chat_feedback_summary", { p_start: from, p_end: to })
+      .rpc(rpc, { p_start: from, p_end: to })
       .then(({ data, error }) => {
         if (!active) return;
         if (!error && data) setFetchedRows(data as FeedbackRow[]);
         setLoadedRange(`${from}|${to}`);
       });
     return () => { active = false; };
-  }, [from, to]);
+  }, [from, to, rpc]);
 
   function setPreset(days: number) {
     setFrom(localIsoDate(daysAgo(days - 1)));
@@ -146,11 +166,9 @@ export function ChatRatingDashboard() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-subjudul font-bold tracking-[-0.02em] text-tinta">
-            Rating {ASSISTANT_NAME}
+            {judul}
           </h2>
-          <p className="mt-1 text-bantu text-redup">
-            Ulasan agregat dari karyawan, tanpa isi percakapan.
-          </p>
+          <p className="mt-1 text-bantu text-redup">{keterangan}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {PRESETS.map(({ label, days }) => (
@@ -172,7 +190,7 @@ export function ChatRatingDashboard() {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Input
           type="date"
-          aria-label="Tanggal mulai rating"
+          aria-label={`Tanggal mulai ${judul}`}
           value={from}
           max={to}
           onChange={(e) => setFrom(e.target.value)}
@@ -181,7 +199,7 @@ export function ChatRatingDashboard() {
         <span className="text-bantu text-redup">–</span>
         <Input
           type="date"
-          aria-label="Tanggal akhir rating"
+          aria-label={`Tanggal akhir ${judul}`}
           value={to}
           min={from}
           onChange={(e) => setTo(e.target.value)}

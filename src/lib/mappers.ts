@@ -6,7 +6,7 @@
 // di sini agar store/auth tetap bersih dan UI tidak berubah.
 // ============================================================
 import type {
-  User, Report, ChatMessage, StatusLog, Role, Status, SubRole, EvidenceFile,
+  User, Report, ChatMessage, StatusLog, Role, Status, SubRole, EvidenceFile, ReportFeedback,
 } from "./types";
 
 // ===== Bentuk baris mentah dari DB =====
@@ -54,6 +54,13 @@ export interface StatusLogRow {
   to_status: string;
   note: string | null;
   attachments: string[] | null;
+  created_at: string;
+}
+
+export interface FeedbackRow {
+  report_id: string;
+  stars: number;
+  comment: string | null;
   created_at: string;
 }
 
@@ -141,6 +148,15 @@ export function statusLogFromRow(row: StatusLogRow): StatusLog {
     toStatus: row.to_status as Status,
     note: row.note ?? undefined,
     attachments: parseAttachments(row.attachments),
+    createdAt: row.created_at,
+  };
+}
+
+export function feedbackFromRow(row: FeedbackRow): ReportFeedback {
+  return {
+    reportId: row.report_id,
+    stars: row.stars,
+    comment: row.comment ?? undefined,
     createdAt: row.created_at,
   };
 }
