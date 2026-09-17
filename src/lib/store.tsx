@@ -14,7 +14,7 @@ import {
   createContext, useCallback, useContext, useEffect, useState, type ReactNode,
 } from "react";
 import { SEED_LOGS, SEED_MESSAGES, SEED_REPORTS } from "./mock";
-import { DEMO_REPORTS } from "./demoReports"; // ⚠️ data demo (mode mock)
+import { DEMO_REPORTS, DEMO_LOGS } from "./demoReports"; // ⚠️ data demo (mode mock)
 import { useAuth } from "./auth";
 import { getSupabase, USE_MOCK } from "./supabaseClient";
 import {
@@ -91,7 +91,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     USE_MOCK ? [...SEED_REPORTS, ...DEMO_REPORTS] : [],
   );
   const [messages, setMessages] = useState<ChatMessage[]>(USE_MOCK ? SEED_MESSAGES : []);
-  const [logs, setLogs] = useState<StatusLog[]>(USE_MOCK ? SEED_LOGS : []);
+  const [logs, setLogs] = useState<StatusLog[]>(USE_MOCK ? [...SEED_LOGS, ...DEMO_LOGS] : []);
   const [feedback, setFeedback] = useState<ReportFeedback[]>([]);
   const [loading, setLoading] = useState(!USE_MOCK);
   const [error, setError] = useState<string | null>(null);

@@ -1,6 +1,7 @@
 // ============================================================
-// DATA DEMO — laporan RWP untuk menguji dashboard, filter tanggal,
-// dan pagination Daftar Laporan di mode mock (USE_MOCK=true).
+// DATA DEMO — laporan RWP beserta riwayat perubahan statusnya untuk
+// menguji dashboard (termasuk durasi per fase), filter tanggal, dan
+// pagination Daftar Laporan di mode mock (USE_MOCK=true).
 //
 // Skenario diambil dari contoh pelanggaran di handbook RWP supaya
 // demo terasa nyata, bukan "test test". Kategori WAJIB memakai string
@@ -9,10 +10,11 @@
 //
 // ⚠️ CARA HAPUS SETELAH DEMO:
 //   1. Hapus file ini.
-//   2. Di src/lib/store.tsx: hapus import DEMO_REPORTS dan
-//      hapus "...DEMO_REPORTS" dari nilai awal useState reports.
+//   2. Di src/lib/store.tsx: hapus import DEMO_REPORTS/DEMO_LOGS dan
+//      hapus "...DEMO_REPORTS" / "...DEMO_LOGS" dari nilai awal useState
+//      reports dan logs.
 // ============================================================
-import type { Report, Status } from "./types";
+import type { Report, Status, StatusLog } from "./types";
 import { KATEGORI_INSIDEN } from "./constants";
 import { makeTicketNo } from "./utils";
 
@@ -134,34 +136,84 @@ function fmt(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
 }
 
-function generate(): Report[] {
-  const out: Report[] = [];
+type Perpindahan = { dari: Status; ke: Status; jam: number; catatan?: string };
+
+/** Jalur perpindahan status sebuah laporan demo. `jam` dihitung sejak
+ *  perpindahan sebelumnya (yang pertama sejak laporan masuk). Variasinya
+ *  deterministik dari `i` supaya dashboard durasi tidak monoton tetapi tetap
+ *  stabil antar-reload. */
+function jalurStatus(status: Status, i: number): Perpindahan[] {
+  const tinjau: Perpindahan = {
+    dari: "Diterima", ke: "Sedang Ditinjau", jam: 4 + (i % 5) * 5,
+    catatan: "Laporan sedang dinilai tim RWP.",
+  };
+  const tindak: Perpindahan = {
+    dari: "Sedang Ditinjau", ke: "Tindak Lanjut", jam: 18 + (i % 3) * 14,
+    catatan: "Ditindaklanjuti bersama unit terkait.",
+  };
+  const selesai: Perpindahan = {
+    dari: "Tindak Lanjut", ke: "Selesai", jam: 24 + (i % 4) * 20,
+    catatan: "Penanganan selesai, pelapor sudah diberi tahu.",
+  };
+  // Separuh ditutup langsung (bukan insiden RWP), separuh setelah ditinjau.
+  const ditutup: Perpindahan[] = i % 2 === 0
+    ? [{
+        dari: "Diterima", ke: "Ditutup", jam: 6 + (i % 4) * 6,
+        catatan: "Ditutup: tidak memenuhi kriteria insiden RWP.",
+      }]
+    : [tinjau, {
+        dari: "Sedang Ditinjau", ke: "Ditutup", jam: 12 + (i % 3) * 10,
+        catatan: "Ditutup setelah klarifikasi: laporan ditarik pelapor.",
+      }];
+
+  const jalur: Record<Status, Perpindahan[]> = {
+    Diterima: [],
+    "Sedang Ditinjau": [tinjau],
+    "Tindak Lanjut": [tinjau, tindak],
+    Selesai: [tinjau, tindak, selesai],
+    Ditutup: ditutup,
+  };
+  return jalur[status];
+}
+
+function generate(): { reports: Report[]; logs: StatusLog[] } {
+  const reports: Report[] = [];
+  const logs: StatusLog[] = [];
   let seq = 900;
 
   for (let i = 0; i < 40; i++) {
     const sk = SKENARIO[i % SKENARIO.length];
     const status = STATUS_CYCLE[i % STATUS_CYCLE.length];
+    const id = `demo-${i}`;
 
-    // ~1–2 laporan per hari, mundur dari BASE → tersebar ~28 hari.
-    const dayOffset = Math.floor((i * 5) / 7);
+    // ~1 laporan per 2 hari, mundur dari BASE → tersebar ~80 hari (Maret–Mei),
+    // supaya filter per bulan di dashboard punya beberapa bulan untuk dibandingkan.
+    const dayOffset = i * 2;
     const created = new Date(BASE.getTime() - dayOffset * 86400000);
     created.setHours(i % 2 === 0 ? 9 : 14, (i * 7) % 60, 0, 0);
 
     // Kejadian mendahului laporan 1–5 hari.
     const kejadian = new Date(created.getTime() - (1 + (i % 5)) * 86400000);
 
+    // Riwayat status: tiap perpindahan jadi satu baris log, waktunya berjalan
+    // maju dari saat laporan masuk. Perubahan terakhir menentukan updatedAt,
+    // dan untuk status akhir juga resolvedAt (sama seperti RPC di Supabase).
+    let kursor = created;
+    jalurStatus(status, i).forEach((p, k) => {
+      kursor = new Date(kursor.getTime() + p.jam * 3_600_000);
+      logs.push({
+        id: `${id}-l${k}`, reportId: id,
+        fromStatus: p.dari, toStatus: p.ke, note: p.catatan,
+        createdAt: fmt(kursor),
+      });
+    });
     const isFinal = status === "Selesai" || status === "Ditutup";
-    let resolved: Date | undefined;
-    if (isFinal) {
-      resolved = new Date(created.getTime() + (2 + (i % 4)) * 86400000);
-      resolved.setHours(16, 0, 0, 0);
-    }
 
     // ~60% anonim — mencerminkan kecenderungan nyata pada kanal RWP.
     const anonim = i % 5 !== 0 && i % 7 !== 0;
 
-    out.push({
-      id: `demo-${i}`,
+    reports.push({
+      id,
       ticketNo: makeTicketNo("RWP", seq++),
       kategori: sk.kategori,
       judul: sk.judul,
@@ -174,12 +226,15 @@ function generate(): Report[] {
       reporterNik: anonim ? undefined : "EMP001",
       status,
       createdAt: fmt(created),
-      updatedAt: fmt(resolved ?? created),
-      resolvedAt: resolved ? fmt(resolved) : undefined,
+      updatedAt: fmt(kursor),
+      resolvedAt: isFinal ? fmt(kursor) : undefined,
       evidenceCount: i % 3 === 0 ? 1 : 0,
     });
   }
-  return out;
+  return { reports, logs };
 }
 
-export const DEMO_REPORTS: Report[] = generate();
+const DEMO = generate();
+export const DEMO_REPORTS: Report[] = DEMO.reports;
+/** Riwayat perubahan status laporan demo — pasangan DEMO_REPORTS. */
+export const DEMO_LOGS: StatusLog[] = DEMO.logs;
