@@ -116,7 +116,7 @@ Lalu isi `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co     # tanpa /rest/v1/
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...      # server-only; dipakai /api/policy-pdf dan skrip di scripts/
+SUPABASE_SERVICE_ROLE_KEY=...      # server-only; dipakai /api/policy-pdf, /api/notifikasi/status, dan skrip di scripts/
 OPENAI_API_KEY=...
 NEXT_PUBLIC_USE_MOCK=false
 ```
@@ -219,6 +219,9 @@ Preview**. Daftar lengkap beserta penjelasannya ada di `.env.local.example`.
 | `OPENAI_CHAT_MODEL` | `gpt-4.1-mini` |
 | `OPENAI_EMBED_MODEL` | `text-embedding-3-small` |
 | `POLICY_PDF_BUCKET` | `policy-docs` |
+| `BREVO_API_KEY` | kunci API Brevo — opsional; kosong = email notifikasi status dimatikan |
+| `BREVO_SENDER_EMAIL` | alamat pengirim yang sudah diverifikasi di Brevo |
+| `APP_URL` | URL publik aplikasi untuk tautan di email; di Vercel boleh kosong |
 
 ⚠️ **Variabel `NEXT_PUBLIC_*` dibaca saat BUILD, bukan saat runtime.** Menambah
 atau mengubahnya tidak berpengaruh sampai kamu deploy ulang.
@@ -256,6 +259,7 @@ Tanpa ini, tautan reset kata sandi dari email berakhir 404.
 | Privasi pelapor | Masuk sebagai admin RWP, buka laporan anonim | Nama & NIK pelapor tidak tampil |
 | Unggah bukti | Buat laporan dengan lampiran di `/lapor` | Berkas terunggah, bisa diunduh lagi |
 | Asisten | Tanya sesuatu di `/asisten` | Menjawab; kalau korpus kosong, menjawab jujur tidak ditemukan |
+| Email status | Masuk sebagai admin, ubah status di `/tiket/[id]` | Pelapor menerima email "ada pembaruan" tanpa detail laporan (butuh `BREVO_*`) |
 
 Asisten baru berguna setelah korpusnya diisi — lihat bagian
 [Menyalakan asisten (RAG)](#6-menyalakan-asisten-rag).
@@ -269,6 +273,7 @@ Asisten baru berguna setelah korpusnya diisi — lihat bagian
 - **`.next` basi setelah menghapus route** → `tsc` mengeluh soal berkas yang sudah tidak ada. Hapus `.next`.
 - **Ganti `OPENAI_EMBED_MODEL`** → wajib proses ulang semua dokumen dari `/korpus`. Dimensi vektor di skema = 1536.
 - **Reset kata sandi lewat email** → free tier Supabase dibatasi 2 email/jam, dan URL pengalihan harus di-whitelist di Dashboard.
+- **Email notifikasi status tidak sampai** → lihat console browser admin dan log server. `belum-dikonfigurasi` berarti `BREVO_API_KEY`/`BREVO_SENDER_EMAIL` kosong; `HTTP 401` dari Brevo berarti kunci salah; masuk spam berarti domain pengirim belum diautentikasi (SPF/DKIM) di Brevo.
 - **Vercel mendeteksi framework "Other"** → Root Directory masih menunjuk folder yang tidak ada (`web`). Kosongkan Root Directory di *Project Settings → General*; aplikasi kini di root repo.
 - **Build gagal: `NEXT_PUBLIC_SUPABASE_URL kosong padahal NEXT_PUBLIC_USE_MOCK bukan "true"`** → environment variables belum dipasang untuk lingkungan yang di-build (Production/Preview). Ini penjaga yang disengaja, bukan bug. Isi variabelnya, deploy ulang.
 - **Deploy jalan tapi semua data gagal dimuat** → `NEXT_PUBLIC_SUPABASE_URL` belum ada saat build, jadi host Supabase tidak masuk `connect-src` di CSP. Isi variabelnya lalu deploy ulang.
@@ -284,4 +289,5 @@ Asisten baru berguna setelah korpusnya diisi — lihat bagian
 - [ ] Naikkan Supabase ke tier berbayar: backup, audit log, retensi data.
 - [ ] Enkripsi at-rest untuk `reporter_id`.
 - [ ] Rate limiting pada halaman masuk.
+- [ ] Autentikasi domain pengirim email (SPF/DKIM) di Brevo bersama tim IT; sementara ini memakai domain sementara.
 - [ ] Isi korpus asisten dengan dokumen kebijakan final, lalu kalibrasi ulang `MIN_SIMILARITY`.

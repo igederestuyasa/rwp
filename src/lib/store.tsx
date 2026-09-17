@@ -45,6 +45,35 @@ const KOLOM_PENILAIAN = "report_id, stars, comment, created_at";
 /** Baris v_reports_admin: kolom laporan + identitas yang sudah disaring SQL. */
 type ReportRowAdmin = ReportRow & { reporter_name?: string | null; reporter_nik?: string | null };
 
+/**
+ * Minta server mengirim email "ada pembaruan" ke pelapor lewat
+ * POST /api/notifikasi/status (Brevo). Hanya dipanggil dari changeStatus
+ * setelah RPC sukses. Kegagalan cukup ke console: statusnya sudah berubah
+ * dan pelapor tetap melihatnya di aplikasi. Jawaban server tidak pernah
+ * memuat alamat email pelapor (§9.1).
+ */
+async function kirimNotifikasiStatus(reportId: string): Promise<void> {
+  try {
+    const { data } = await getSupabase().auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    const res = await fetch("/api/notifikasi/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reportId }),
+    });
+    const hasil = (await res.json().catch(() => null)) as
+      { dikirim?: boolean; alasan?: string; error?: string } | null;
+    if (!res.ok) {
+      console.warn("[notifikasi] email status tidak terkirim:", hasil?.error ?? res.status);
+    } else if (hasil?.dikirim === false) {
+      console.info("[notifikasi] email status dilewati:", hasil.alasan);
+    }
+  } catch (e) {
+    console.warn("[notifikasi] email status tidak terkirim:", e);
+  }
+}
+
 const PESAN_GAGAL_MUAT =
   "Data laporan belum bisa dimuat dari server. Periksa koneksi, lalu coba lagi.";
 
@@ -303,6 +332,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       p_attachments: encodeAttachments(uploaded),
     });
     if (error) throw new Error(error.message);
+    // Email "ada pembaruan" ke pelapor — best-effort dan tidak ditunggu:
+    // status sudah tercatat di DB, jadi kegagalan email tidak boleh
+    // menggagalkan aksi ini maupun menunda refresh.
+    void kirimNotifikasiStatus(reportId);
     await refresh(); // tarik ulang reports + logs
   }
 

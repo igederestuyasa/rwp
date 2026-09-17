@@ -21,7 +21,8 @@ secara rahasia, dan memantau penanganannya.
 Empat fungsi:
 
 1. **Kebijakan RWP** (`/kebijakan`) — handbook lengkap, dirender dari Markdown atau PDF berwatermark.
-2. **Pelaporan** (`/lapor` → `/laporan` → `/laporan/[id]`) — form insiden, opsi anonim, unggah bukti, pelacakan status, percakapan dengan admin, penilaian penanganan setelah laporan final.
+2. **Pelaporan** (`/lapor` → `/laporan` → `/laporan/[id]`) — form insiden, opsi anonim, unggah bukti, pelacakan status, percakapan dengan admin, penilaian penanganan setelah laporan final,
+   email pemberitahuan ke pelapor saat status berubah (Brevo, opsional).
 3. **Sahabat RWP** (`/asisten`) — asisten AI berbasis RAG, korpusnya HANYA dokumen kebijakan.
 4. **Layanan Psikologi** (`/psikologi`) — 6 kanal EAP, kontak langsung, tanpa tiket.
 
@@ -161,6 +162,15 @@ RPC: `change_report_status`, `reveal_reporter`, `match_rag_chunks`,
   dibatasi slug karena ikut ke URL dan path Storage. Menghapus kebijakan
   membuat `corpus_documents.policy_id` jadi NULL (FK `on delete set null`), dan
   dokumen korpusnya harus dihapus terpisah dari `/korpus`.
+- **`/api/notifikasi/status` adalah satu-satunya tempat selain RPC `reveal_reporter`
+  yang membaca `reports.reporter_id`** — lewat `service_role` di server, semata untuk
+  mencari `users.email` lalu mengirim email "ada pembaruan" lewat Brevo
+  (`lib/emailServer.ts`). `reporter_id` dan alamat email tidak boleh keluar dari
+  respons route itu, dan isi email harus tetap generik: tanpa nomor tiket, status,
+  judul, kategori, kronologi, atau catatan admin (§9.1 — email melewati Brevo dan
+  server mail perusahaan). Pemanggilnya `changeStatus` di `store.tsx`, best-effort
+  setelah RPC sukses; gagal kirim tidak boleh menggagalkan perubahan status. Tanpa
+  `BREVO_API_KEY` fitur ini diam saja.
 - **Entri eskalasi terlihat oleh pelapor.** `laporan/[id]` sengaja memakai
   `hideEscalation={false}`. Ini keputusan transparansi, bukan bug.
 - **`report_feedback` tidak menyimpan `user_id` dan tidak punya policy admin.**
@@ -312,7 +322,7 @@ Alur: `asisten/page.tsx` → `POST /api/asisten` → verifikasi user → embed p
 
 ### 9.5 Secret & kredensial
 - **[MVP]** Semua kredensial (`OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
-  anon key) di `.env.local`. `.env*` WAJIB di `.gitignore`. Sediakan
+  `BREVO_API_KEY`, anon key) di `.env.local`. `.env*` WAJIB di `.gitignore`. Sediakan
   `.env.local.example` tanpa nilai asli.
 - **[MVP]** Repo **private**. Dokumen RWP asli & data laporan JANGAN di-commit.
 - **[MVP]** Di Vercel, isi lewat *Project Settings → Environment Variables*,
@@ -377,6 +387,11 @@ Ini pilot di free tier untuk pembuktian konsep. Sebelum menampung laporan RWP as
 - Tipe Supabase belum di-generate (`supabase gen types`); mapper masih
   mengetik baris secara manual di `lib/mappers.ts`.
 - Notifikasi belum realtime (data dari Supabase, status baca/dismiss di localStorage).
+- Email status ke pelapor dipicu dari browser admin lewat `/api/notifikasi/status`,
+  bukan dari trigger database: perubahan status lewat SQL Editor tidak mengirim
+  email, dan admin hanya tahu kegagalannya dari console. Langkah lanjutnya adalah
+  Database Webhook Supabase pada `report_status_log` ke route yang sama. Domain
+  pengirim Brevo juga belum diautentikasi (SPF/DKIM).
 - Korpus belum menerima PDF/DOCX — konversi manual dulu ke `.md` sebelum
   diunggah di `/korpus`.
 - `storage.ts` masih hardcode nama bucket.
