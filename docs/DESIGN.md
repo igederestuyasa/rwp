@@ -89,7 +89,8 @@ Satu keluarga huruf: Plus Jakarta Sans (variable, subset latin). Angka di tabel 
 - Bar atas: tinggi 64 di HP, 72 di desktop. Kiri: logo 28px dan nama app (16px, 700). Kanan: nama unit (14px, redup, disembunyikan di bawah 640px).
 - Pembuka layar: salam opsional (16px, 500, redup), h1, subjudul (maks 20 kata), lalu kontrol utama. Maksimal 4 elemen teks; informasi tambahan masuk ke subjudul.
 - Judul bagian: keterangannya ditumpuk di bawah judul (14px, redup).
-- Desktop (mulai 1024px): grid `minmax(0,1fr) minmax(320px,400px)`, jarak kolom 64, area `"pembuka panel" "konten panel"`, padding atas 32. Panel `position: sticky; top: 24px`, sejajar dengan baris salam.
+- Desktop (mulai 1024px): grid `minmax(0,1fr) clamp(320px,36%,400px)`, jarak kolom 64, area `"pembuka panel" "konten panel"`, padding atas 32. Panel `position: sticky; top: 24px`, sejajar dengan baris salam.
+  Lebar panel 320–400 dihitung dari lebar wadah (`clamp`), bukan `minmax(320px,400px)`: dengan `minmax`, CSS Grid memberi panel jatah 400 lebih dulu dan kolom daftar tinggal ±224px pada layar 1024–1120px. Dengan `clamp`, daftar yang diprioritaskan saat sempit, dan panel membesar seiring layar.
 - Di bawah 1024px: satu kolom (pembuka lalu konten), jarak antarblok 48, padding atas 24.
 
 ## Komponen
@@ -98,7 +99,8 @@ Satu keluarga huruf: Plus Jakarta Sans (variable, subset latin). Angka di tabel 
 - Kelompok: judul 14px 650 dan jumlah (500, redup). Jarak judul ke kartu 12, antarkelompok 32.
 - Kartu item: grid kolom `auto 1fr auto`, area `"ikon nama ujung" "ikon desk desk"`, jarak 4 dan 16, padding 16, radius 16, border garis, latar kartu.
   - Isi: ikon generatif 40px; nama 16px 650; ujung kanan setinggi 22 berisi label status dan panah arrow-up-right 18px; deskripsi 14px redup, maksimal 3 baris.
-  - Grid kartu: 1 kolom, 2 kolom mulai 640px, jarak 12.
+  - Grid kartu: 1 kolom, 2 kolom bila lebar wadahnya ≥576px (container query, bukan viewport — kolom daftar bisa jauh lebih sempit dari layar saat sidebar dan panel detail tampil), jarak 12.
+  - Kartu sempit (<400px, mis. dua kolom pada kolom daftar ±640px): label status pindah ke baris sendiri di bawah nama dan boleh membungkus; ujung hanya berisi panah. Pada kartu lebar, kolom ujung maksimal 40% lebar kartu dan label yang kelewat panjang dipotong dengan elipsis.
   - Hover: border tinta, panah jadi merah dan bergeser 2px ke kanan atas.
   - Terpilih (desktop): border tinta. Saat ditekan: scale .99.
 - Item belum tersedia: border putus-putus garis-putus, latar transparan, nama redup, ikon versi rencana, label "Segera".

@@ -49,7 +49,7 @@ function bukaKanal(ch: PsikologiChannel) {
 
 // ─── Susunan daftar-detail (§Spasi, bentuk, tata letak) ──────────────────────
 const GAYA_DAFTAR_DETAIL: CSSProperties = {
-  gridTemplateColumns: "minmax(0,1fr) minmax(320px,400px)",
+  gridTemplateColumns: "minmax(0,1fr) clamp(320px,36%,400px)",
   gridTemplateAreas: '"pembuka panel" "konten panel"',
   columnGap: 64,
   rowGap: 32,
